@@ -1,4 +1,4 @@
-import { fetchRatingChanges } from './codeforces/api';
+import { fetchContestStandings, fetchRatedUsers, fetchRatingChanges } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
 import { addFinalDeltaColumn, findStandingsTable } from './standings/table';
 import { installStandingsStyles } from './standings/style';
@@ -26,10 +26,24 @@ async function main(): Promise<void> {
     );
   } catch (error) {
     console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
+    await probePredictionInputs(page.contestId);
   }
 
   addFinalDeltaColumn(standings, finalDeltas);
   console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
+}
+
+async function probePredictionInputs(contestId: string): Promise<void> {
+  const [standings, ratedUsers] = await Promise.all([
+    fetchContestStandings(contestId),
+    fetchRatedUsers(),
+  ]);
+
+  console.info(`${LOG_PREFIX} Prediction inputs loaded:`, {
+    contest: standings.contest.name,
+    rows: standings.rows.length,
+    ratedUsers: ratedUsers.length,
+  });
 }
 
 void main();

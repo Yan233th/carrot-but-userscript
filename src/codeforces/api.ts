@@ -15,8 +15,66 @@ export interface RatingChange {
   newRating: number;
 }
 
+export interface Contest {
+  id: number;
+  name: string;
+  type: string;
+  phase: string;
+  frozen: boolean;
+  durationSeconds: number;
+  startTimeSeconds?: number;
+}
+
+export interface ContestProblem {
+  contestId?: number;
+  index: string;
+  name: string;
+  type: string;
+  points?: number;
+}
+
+export interface PartyMember {
+  handle: string;
+}
+
+export interface Party {
+  participantType: string;
+  teamId?: number;
+  teamName?: string;
+  members: PartyMember[];
+}
+
+export interface StandingsRow {
+  party: Party;
+  rank: number;
+  points: number;
+  penalty: number;
+}
+
+export interface ContestStandings {
+  contest: Contest;
+  problems: ContestProblem[];
+  rows: StandingsRow[];
+}
+
+export interface RatedUser {
+  handle: string;
+  rating: number;
+}
+
 export async function fetchRatingChanges(contestId: string): Promise<RatingChange[]> {
   return await fetchApi<RatingChange[]>('contest.ratingChanges', { contestId });
+}
+
+export async function fetchContestStandings(contestId: string): Promise<ContestStandings> {
+  return await fetchApi<ContestStandings>('contest.standings', {
+    contestId,
+    showUnofficial: 'false',
+  });
+}
+
+export async function fetchRatedUsers(): Promise<RatedUser[]> {
+  return await fetchApi<RatedUser[]>('user.ratedList', { activeOnly: 'false' });
 }
 
 async function fetchApi<T>(method: string, query: Record<string, string>): Promise<T> {
