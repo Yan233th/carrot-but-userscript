@@ -1,7 +1,13 @@
 import { fetchContestStandings, fetchRatedUsers, fetchRatingChanges } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
 import { predictFromCodeforces } from './rating/codeforces';
-import { addFinalDeltaColumn, addPredictedDeltaColumn, findStandingsTable } from './standings/table';
+import {
+  addFinalDeltaColumn,
+  addLoadingColumn,
+  addPredictedDeltaColumn,
+  clearCarrotColumns,
+  findStandingsTable,
+} from './standings/table';
 import { installStandingsStyles } from './standings/style';
 import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
 
@@ -20,6 +26,7 @@ async function main(): Promise<void> {
   }
 
   installStandingsStyles(document);
+  addLoadingColumn(standings);
   let finalDeltas: Map<string, number> | null = null;
   try {
     const ratingChanges = await fetchRatingChanges(page.contestId);
@@ -32,11 +39,13 @@ async function main(): Promise<void> {
       console.error(`${LOG_PREFIX} Prediction failed:`, predictionError);
       return null;
     });
+    clearCarrotColumns(standings);
     addPredictedDeltaColumn(standings, predictions);
     console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
     return;
   }
 
+  clearCarrotColumns(standings);
   addFinalDeltaColumn(standings, finalDeltas);
   console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
 }

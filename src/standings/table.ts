@@ -31,6 +31,20 @@ export function addFinalDeltaColumn(
   });
 }
 
+export function addLoadingColumn(standings: StandingsTable): void {
+  addDeltaColumn(standings, 'Carrot, But Userscript loading', 'CBU', (cell, _row, isFooterRow) => {
+    cell.textContent = isFooterRow ? '' : '...';
+    cell.classList.add('carrot-but-userscript-muted');
+  });
+}
+
+export function clearCarrotColumns(standings: StandingsTable): void {
+  for (const row of standings.rows) {
+    row.querySelectorAll(`.${CELL_CLASS}`).forEach((cell) => cell.remove());
+    row.querySelector('th:last-child, td:last-child')?.classList.add('right');
+  }
+}
+
 export function addPredictedDeltaColumn(standings: StandingsTable, predictions: Prediction[] | null): void {
   const predictionMap = predictions
     ? new Map(predictions.map((prediction) => [prediction.handle, prediction]))
