@@ -3,6 +3,7 @@ import { getStandingsPage } from './codeforces/page';
 import { predictFromCodeforces } from './rating/codeforces';
 import { addFinalDeltaColumn, addPredictedDeltaColumn, findStandingsTable } from './standings/table';
 import { installStandingsStyles } from './standings/style';
+import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
 
 const LOG_PREFIX = '[Carrot, But Userscript]';
 
@@ -40,7 +41,7 @@ async function main(): Promise<void> {
 async function predictContest(contestId: string) {
   const [standings, ratedUsers] = await Promise.all([
     fetchContestStandings(contestId),
-    fetchRatedUsers(),
+    loadRatedUsers(),
   ]);
 
   const predictions = predictFromCodeforces(standings, ratedUsers);
@@ -51,6 +52,19 @@ async function predictContest(contestId: string) {
     predictions: predictions.length,
   });
   return predictions;
+}
+
+async function loadRatedUsers() {
+  const cachedUsers = await getCachedRatedUsers();
+  if (cachedUsers) {
+    console.info(`${LOG_PREFIX} Using cached rated users:`, cachedUsers.length);
+    return cachedUsers;
+  }
+
+  const users = await fetchRatedUsers();
+  await setCachedRatedUsers(users);
+  console.info(`${LOG_PREFIX} Cached rated users:`, users.length);
+  return users;
 }
 
 void main();

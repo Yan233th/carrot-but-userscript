@@ -20,3 +20,6 @@ bun run build
 Install `dist/carrot-but-userscript.user.js` in Tampermonkey, then open a
 Codeforces standings page. Finished rated contests should show a final rating
 change column.
+
+For contests without published rating changes, the script fetches rated users
+once and caches them in Tampermonkey storage for one hour.
