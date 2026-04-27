@@ -1,16 +1,24 @@
-const STANDINGS_PATH_PATTERN = /^\/(?:contest|gym)\/(\d+)\/standings\/?$/;
+import { getStandingsPage } from './codeforces/page';
+import { addPlaceholderColumn, findStandingsTable } from './standings/table';
+import { installStandingsStyles } from './standings/style';
 
-function getContestId(pathname: string): string | null {
-  return STANDINGS_PATH_PATTERN.exec(pathname)?.[1] ?? null;
-}
+const LOG_PREFIX = '[Carrot, But Userscript]';
 
 function main(): void {
-  const contestId = getContestId(window.location.pathname);
-  if (!contestId) {
+  const page = getStandingsPage(window.location);
+  if (!page) {
     return;
   }
 
-  console.info('[Carrot, But Userscript] Ready on standings page:', contestId);
+  const standings = findStandingsTable(document);
+  if (!standings) {
+    console.info(`${LOG_PREFIX} Standings table not found.`);
+    return;
+  }
+
+  installStandingsStyles(document);
+  addPlaceholderColumn(standings, page.contestId);
+  console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
 }
 
 main();
