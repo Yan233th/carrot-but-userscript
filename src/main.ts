@@ -5,6 +5,7 @@ import {
   addFinalDeltaColumn,
   addLoadingColumn,
   addPredictedDeltaColumn,
+  type ColumnRenderStats,
   clearCarrotColumns,
   findStandingsTable,
 } from './standings/table';
@@ -40,13 +41,13 @@ async function main(): Promise<void> {
       return null;
     });
     clearCarrotColumns(standings);
-    addPredictedDeltaColumn(standings, predictions);
+    logRenderStats('predicted', addPredictedDeltaColumn(standings, predictions));
     console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
     return;
   }
 
   clearCarrotColumns(standings);
-  addFinalDeltaColumn(standings, finalDeltas);
+  logRenderStats('final', addFinalDeltaColumn(standings, finalDeltas));
   console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
 }
 
@@ -77,6 +78,13 @@ async function loadRatedUsers() {
   await setCachedRatedUsers(users);
   console.info(`${LOG_PREFIX} Cached rated users:`, users.length);
   return users;
+}
+
+function logRenderStats(mode: 'final' | 'predicted', stats: ColumnRenderStats): void {
+  console.info(`${LOG_PREFIX} Rendered ${mode} delta column:`, {
+    matchedRows: stats.matchedRows,
+    dataRows: stats.dataRows,
+  });
 }
 
 void main();

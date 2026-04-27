@@ -11,6 +11,11 @@ export interface StandingsTable {
   rows: HTMLTableRowElement[];
 }
 
+export interface ColumnRenderStats {
+  matchedRows: number;
+  dataRows: number;
+}
+
 export function findStandingsTable(document: Document): StandingsTable | null {
   const table = document.querySelector<HTMLTableElement>('table.standings');
   if (!table) {
@@ -28,16 +33,17 @@ export function findStandingsTable(document: Document): StandingsTable | null {
 export function addFinalDeltaColumn(
   standings: StandingsTable,
   finalDeltas: Map<string, number> | null,
-): void {
-  addDeltaColumn(standings, 'Final rating change', FINAL_HEADER_CLASS, (cell, row, isFooterRow) => {
-    renderFinalDeltaCell(cell, row, finalDeltas, isFooterRow);
+): ColumnRenderStats {
+  return addDeltaColumn(standings, 'Final rating change', FINAL_HEADER_CLASS, (cell, row, isFooterRow) => {
+    return renderFinalDeltaCell(cell, row, finalDeltas, isFooterRow);
   });
 }
 
-export function addLoadingColumn(standings: StandingsTable): void {
-  addDeltaColumn(standings, 'Loading rating changes', LOADING_HEADER_CLASS, (cell, _row, isFooterRow) => {
+export function addLoadingColumn(standings: StandingsTable): ColumnRenderStats {
+  return addDeltaColumn(standings, 'Loading rating changes', LOADING_HEADER_CLASS, (cell, _row, isFooterRow) => {
     cell.textContent = isFooterRow ? '' : '\u2026';
     cell.classList.add('carrot-but-userscript-muted');
+    return !isFooterRow;
   });
 }
 
@@ -48,12 +54,12 @@ export function clearCarrotColumns(standings: StandingsTable): void {
   }
 }
 
-export function addPredictedDeltaColumn(standings: StandingsTable, predictions: Prediction[] | null): void {
+export function addPredictedDeltaColumn(standings: StandingsTable, predictions: Prediction[] | null): ColumnRenderStats {
   const predictionMap = predictions
     ? new Map(predictions.map((prediction) => [prediction.handle, prediction]))
     : null;
-  addDeltaColumn(standings, 'Predicted rating change', PREDICTED_HEADER_CLASS, (cell, row, isFooterRow) => {
-    renderPredictedDeltaCell(cell, row, predictionMap, isFooterRow);
+  return addDeltaColumn(standings, 'Predicted rating change', PREDICTED_HEADER_CLASS, (cell, row, isFooterRow) => {
+    return renderPredictedDeltaCell(cell, row, predictionMap, isFooterRow);
   });
 }
 
@@ -61,8 +67,11 @@ function addDeltaColumn(
   standings: StandingsTable,
   title: string,
   headerClass: string,
-  render: (cell: HTMLElement, row: HTMLTableRowElement, isFooterRow: boolean) => void,
-): void {
+  render: (cell: HTMLElement, row: HTMLTableRowElement, isFooterRow: boolean) => boolean,
+): ColumnRenderStats {
+  let dataRows = 0;
+  let matchedRows = 0;
+
   for (const [index, row] of standings.rows.entries()) {
     row.querySelector('th:last-child, td:last-child')?.classList.remove('right');
 
@@ -75,11 +84,19 @@ function addDeltaColumn(
       cell.textContent = '\u0394';
     } else {
       cell.classList.add('right');
-      render(cell, row, index === standings.rows.length - 1);
+      const isFooterRow = index === standings.rows.length - 1;
+      if (!isFooterRow) {
+        dataRows += 1;
+      }
+      if (render(cell, row, isFooterRow)) {
+        matchedRows += 1;
+      }
     }
 
     row.append(cell);
   }
+
+  return { matchedRows, dataRows };
 }
 
 function renderFinalDeltaCell(
@@ -87,10 +104,10 @@ function renderFinalDeltaCell(
   row: HTMLTableRowElement,
   finalDeltas: Map<string, number> | null,
   isFooterRow: boolean,
-): void {
+): boolean {
   if (isFooterRow) {
     cell.textContent = '';
-    return;
+    return false;
   }
 
   const handle = getHandle(row);
@@ -99,11 +116,12 @@ function renderFinalDeltaCell(
     cell.textContent = 'N/A';
     cell.title = finalDeltas ? 'No rating change found for this row' : 'Rating changes unavailable';
     cell.classList.add('carrot-but-userscript-muted');
-    return;
+    return false;
   }
 
   cell.textContent = delta > 0 ? `+${delta}` : String(delta);
   cell.classList.add(delta > 0 ? 'carrot-but-userscript-positive' : 'carrot-but-userscript-negative');
+  return true;
 }
 
 function renderPredictedDeltaCell(
@@ -111,10 +129,10 @@ function renderPredictedDeltaCell(
   row: HTMLTableRowElement,
   predictions: Map<string, Prediction> | null,
   isFooterRow: boolean,
-): void {
+): boolean {
   if (isFooterRow) {
     cell.textContent = '';
-    return;
+    return false;
   }
 
   const handle = getHandle(row);
@@ -123,7 +141,7 @@ function renderPredictedDeltaCell(
     cell.textContent = 'N/A';
     cell.title = predictions ? 'No prediction found for this row' : 'Prediction unavailable';
     cell.classList.add('carrot-but-userscript-muted');
-    return;
+    return false;
   }
 
   cell.textContent = prediction.delta > 0 ? `+${prediction.delta}` : String(prediction.delta);
@@ -131,6 +149,7 @@ function renderPredictedDeltaCell(
   cell.classList.add(
     prediction.delta > 0 ? 'carrot-but-userscript-positive' : 'carrot-but-userscript-negative',
   );
+  return true;
 }
 
 function getHandle(row: HTMLTableRowElement): string | null {
