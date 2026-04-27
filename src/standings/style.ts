@@ -2,12 +2,29 @@ export function installStandingsStyles(document: Document): void {
   const style = document.createElement('style');
   style.textContent = `
 .carrot-but-userscript-cell {
+  width: 4em;
   min-width: 4em;
   text-align: center;
 }
 
 .carrot-but-userscript-header {
   font-weight: bold;
+}
+
+.carrot-but-userscript-header-final {
+  color: green;
+}
+
+.carrot-but-userscript-header-loading {
+  color: #9aa0a6;
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-color: #c4c7cc;
+  text-underline-offset: 0.16em;
+}
+
+.carrot-but-userscript-header-predicted {
+  color: #9b6a00;
 }
 
 .carrot-but-userscript-positive {

@@ -2,6 +2,9 @@ import type { Prediction } from '../rating/predict';
 
 const CELL_CLASS = 'carrot-but-userscript-cell';
 const HEADER_CLASS = 'carrot-but-userscript-header';
+const FINAL_HEADER_CLASS = 'carrot-but-userscript-header-final';
+const LOADING_HEADER_CLASS = 'carrot-but-userscript-header-loading';
+const PREDICTED_HEADER_CLASS = 'carrot-but-userscript-header-predicted';
 
 export interface StandingsTable {
   table: HTMLTableElement;
@@ -26,14 +29,14 @@ export function addFinalDeltaColumn(
   standings: StandingsTable,
   finalDeltas: Map<string, number> | null,
 ): void {
-  addDeltaColumn(standings, 'Final rating change', '\u0394', (cell, row, isFooterRow) => {
+  addDeltaColumn(standings, 'Final rating change', FINAL_HEADER_CLASS, (cell, row, isFooterRow) => {
     renderFinalDeltaCell(cell, row, finalDeltas, isFooterRow);
   });
 }
 
 export function addLoadingColumn(standings: StandingsTable): void {
-  addDeltaColumn(standings, 'Carrot, But Userscript loading', 'CBU', (cell, _row, isFooterRow) => {
-    cell.textContent = isFooterRow ? '' : '...';
+  addDeltaColumn(standings, 'Loading rating changes', LOADING_HEADER_CLASS, (cell, _row, isFooterRow) => {
+    cell.textContent = isFooterRow ? '' : '\u2026';
     cell.classList.add('carrot-but-userscript-muted');
   });
 }
@@ -49,7 +52,7 @@ export function addPredictedDeltaColumn(standings: StandingsTable, predictions: 
   const predictionMap = predictions
     ? new Map(predictions.map((prediction) => [prediction.handle, prediction]))
     : null;
-  addDeltaColumn(standings, 'Predicted rating change', '\u0394', (cell, row, isFooterRow) => {
+  addDeltaColumn(standings, 'Predicted rating change', PREDICTED_HEADER_CLASS, (cell, row, isFooterRow) => {
     renderPredictedDeltaCell(cell, row, predictionMap, isFooterRow);
   });
 }
@@ -57,7 +60,7 @@ export function addPredictedDeltaColumn(standings: StandingsTable, predictions: 
 function addDeltaColumn(
   standings: StandingsTable,
   title: string,
-  label: string,
+  headerClass: string,
   render: (cell: HTMLElement, row: HTMLTableRowElement, isFooterRow: boolean) => void,
 ): void {
   for (const [index, row] of standings.rows.entries()) {
@@ -67,9 +70,9 @@ function addDeltaColumn(
     cell.classList.add(CELL_CLASS);
 
     if (index === 0) {
-      cell.classList.add('top', 'right', HEADER_CLASS);
+      cell.classList.add('top', 'right', HEADER_CLASS, headerClass);
       cell.title = title;
-      cell.textContent = label;
+      cell.textContent = '\u0394';
     } else {
       cell.classList.add('right');
       render(cell, row, index === standings.rows.length - 1);
