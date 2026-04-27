@@ -23,3 +23,9 @@ change column.
 
 For contests without published rating changes, the script fetches rated users
 once and caches them in Tampermonkey storage for one hour.
+
+Column states:
+
+- Gray underlined `Δ`: loading.
+- Green `Δ`: final rating changes.
+- Amber `Δ`: predicted rating changes.
