@@ -28,7 +28,10 @@ async function main(): Promise<void> {
     );
   } catch (error) {
     console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
-    const predictions = await predictContest(page.contestId);
+    const predictions = await predictContest(page.contestId).catch((predictionError: unknown) => {
+      console.error(`${LOG_PREFIX} Prediction failed:`, predictionError);
+      return null;
+    });
     addPredictedDeltaColumn(standings, predictions);
     console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
     return;

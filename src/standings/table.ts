@@ -31,8 +31,10 @@ export function addFinalDeltaColumn(
   });
 }
 
-export function addPredictedDeltaColumn(standings: StandingsTable, predictions: Prediction[]): void {
-  const predictionMap = new Map(predictions.map((prediction) => [prediction.handle, prediction]));
+export function addPredictedDeltaColumn(standings: StandingsTable, predictions: Prediction[] | null): void {
+  const predictionMap = predictions
+    ? new Map(predictions.map((prediction) => [prediction.handle, prediction]))
+    : null;
   addDeltaColumn(standings, 'Predicted rating change', '\u0394', (cell, row, isFooterRow) => {
     renderPredictedDeltaCell(cell, row, predictionMap, isFooterRow);
   });
@@ -90,7 +92,7 @@ function renderFinalDeltaCell(
 function renderPredictedDeltaCell(
   cell: HTMLElement,
   row: HTMLTableRowElement,
-  predictions: Map<string, Prediction>,
+  predictions: Map<string, Prediction> | null,
   isFooterRow: boolean,
 ): void {
   if (isFooterRow) {
@@ -99,10 +101,10 @@ function renderPredictedDeltaCell(
   }
 
   const handle = getHandle(row);
-  const prediction = handle ? predictions.get(handle) : undefined;
+  const prediction = handle ? predictions?.get(handle) : undefined;
   if (!prediction) {
     cell.textContent = 'N/A';
-    cell.title = 'No prediction found for this row';
+    cell.title = predictions ? 'No prediction found for this row' : 'Prediction unavailable';
     cell.classList.add('carrot-but-userscript-muted');
     return;
   }
