@@ -1,10 +1,11 @@
+import { fetchRatingChanges } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
-import { addPlaceholderColumn, findStandingsTable } from './standings/table';
+import { addFinalDeltaColumn, findStandingsTable } from './standings/table';
 import { installStandingsStyles } from './standings/style';
 
 const LOG_PREFIX = '[Carrot, But Userscript]';
 
-function main(): void {
+async function main(): Promise<void> {
   const page = getStandingsPage(window.location);
   if (!page) {
     return;
@@ -17,8 +18,18 @@ function main(): void {
   }
 
   installStandingsStyles(document);
-  addPlaceholderColumn(standings, page.contestId);
+  let finalDeltas: Map<string, number> | null = null;
+  try {
+    const ratingChanges = await fetchRatingChanges(page.contestId);
+    finalDeltas = new Map(
+      ratingChanges.map((change) => [change.handle, change.newRating - change.oldRating]),
+    );
+  } catch (error) {
+    console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
+  }
+
+  addFinalDeltaColumn(standings, finalDeltas);
   console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
 }
 
-main();
+void main();

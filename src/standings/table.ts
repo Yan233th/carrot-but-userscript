@@ -20,7 +20,10 @@ export function findStandingsTable(document: Document): StandingsTable | null {
   return { table, rows };
 }
 
-export function addPlaceholderColumn(standings: StandingsTable, contestId: string): void {
+export function addFinalDeltaColumn(
+  standings: StandingsTable,
+  finalDeltas: Map<string, number> | null,
+): void {
   for (const [index, row] of standings.rows.entries()) {
     row.querySelector('th:last-child, td:last-child')?.classList.remove('right');
 
@@ -29,13 +32,43 @@ export function addPlaceholderColumn(standings: StandingsTable, contestId: strin
 
     if (index === 0) {
       cell.classList.add('top', 'right', HEADER_CLASS);
-      cell.title = `Carrot, But Userscript is active for contest ${contestId}`;
-      cell.textContent = 'CBU';
+      cell.title = 'Final rating change';
+      cell.textContent = '\u0394';
     } else {
       cell.classList.add('right');
-      cell.textContent = index === standings.rows.length - 1 ? '' : '...';
+      renderFinalDeltaCell(cell, row, finalDeltas, index === standings.rows.length - 1);
     }
 
     row.append(cell);
   }
+}
+
+function renderFinalDeltaCell(
+  cell: HTMLElement,
+  row: HTMLTableRowElement,
+  finalDeltas: Map<string, number> | null,
+  isFooterRow: boolean,
+): void {
+  if (isFooterRow) {
+    cell.textContent = '';
+    return;
+  }
+
+  const handle = getHandle(row);
+  const delta = handle && finalDeltas?.get(handle);
+  if (typeof delta !== 'number') {
+    cell.textContent = 'N/A';
+    cell.title = finalDeltas ? 'No rating change found for this row' : 'Rating changes unavailable';
+    cell.classList.add('carrot-but-userscript-muted');
+    return;
+  }
+
+  cell.textContent = delta > 0 ? `+${delta}` : String(delta);
+  cell.classList.add(delta > 0 ? 'carrot-but-userscript-positive' : 'carrot-but-userscript-negative');
+}
+
+function getHandle(row: HTMLTableRowElement): string | null {
+  const contestantCell = row.querySelector('td.contestant-cell');
+  const profileLink = contestantCell?.querySelector<HTMLAnchorElement>('a[href*="/profile/"]');
+  return profileLink?.textContent?.trim() || null;
 }
