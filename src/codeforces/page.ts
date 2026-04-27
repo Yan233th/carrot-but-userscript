@@ -1,4 +1,4 @@
-const STANDINGS_PATH_PATTERN = /^\/(?:contest|gym)\/(\d+)\/standings\/?$/;
+const STANDINGS_PATH_PATTERN = /^\/(?:contest|gym)\/(\d+)\/standings(?:\/.*)?$/;
 
 export interface StandingsPage {
   contestId: string;
