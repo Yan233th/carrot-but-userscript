@@ -1,0 +1,8 @@
+node_modules
+dist
+*.local
+
+# Editor files
+.vscode
+.idea
+.DS_Store
