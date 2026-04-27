@@ -1,3 +1,5 @@
+import type { Prediction } from '../rating/predict';
+
 const CELL_CLASS = 'carrot-but-userscript-cell';
 const HEADER_CLASS = 'carrot-but-userscript-header';
 
@@ -24,6 +26,24 @@ export function addFinalDeltaColumn(
   standings: StandingsTable,
   finalDeltas: Map<string, number> | null,
 ): void {
+  addDeltaColumn(standings, 'Final rating change', '\u0394', (cell, row, isFooterRow) => {
+    renderFinalDeltaCell(cell, row, finalDeltas, isFooterRow);
+  });
+}
+
+export function addPredictedDeltaColumn(standings: StandingsTable, predictions: Prediction[]): void {
+  const predictionMap = new Map(predictions.map((prediction) => [prediction.handle, prediction]));
+  addDeltaColumn(standings, 'Predicted rating change', '\u0394', (cell, row, isFooterRow) => {
+    renderPredictedDeltaCell(cell, row, predictionMap, isFooterRow);
+  });
+}
+
+function addDeltaColumn(
+  standings: StandingsTable,
+  title: string,
+  label: string,
+  render: (cell: HTMLElement, row: HTMLTableRowElement, isFooterRow: boolean) => void,
+): void {
   for (const [index, row] of standings.rows.entries()) {
     row.querySelector('th:last-child, td:last-child')?.classList.remove('right');
 
@@ -32,11 +52,11 @@ export function addFinalDeltaColumn(
 
     if (index === 0) {
       cell.classList.add('top', 'right', HEADER_CLASS);
-      cell.title = 'Final rating change';
-      cell.textContent = '\u0394';
+      cell.title = title;
+      cell.textContent = label;
     } else {
       cell.classList.add('right');
-      renderFinalDeltaCell(cell, row, finalDeltas, index === standings.rows.length - 1);
+      render(cell, row, index === standings.rows.length - 1);
     }
 
     row.append(cell);
@@ -65,6 +85,33 @@ function renderFinalDeltaCell(
 
   cell.textContent = delta > 0 ? `+${delta}` : String(delta);
   cell.classList.add(delta > 0 ? 'carrot-but-userscript-positive' : 'carrot-but-userscript-negative');
+}
+
+function renderPredictedDeltaCell(
+  cell: HTMLElement,
+  row: HTMLTableRowElement,
+  predictions: Map<string, Prediction>,
+  isFooterRow: boolean,
+): void {
+  if (isFooterRow) {
+    cell.textContent = '';
+    return;
+  }
+
+  const handle = getHandle(row);
+  const prediction = handle ? predictions.get(handle) : undefined;
+  if (!prediction) {
+    cell.textContent = 'N/A';
+    cell.title = 'No prediction found for this row';
+    cell.classList.add('carrot-but-userscript-muted');
+    return;
+  }
+
+  cell.textContent = prediction.delta > 0 ? `+${prediction.delta}` : String(prediction.delta);
+  cell.title = `Performance: ${prediction.performance === Infinity ? 'Infinity' : prediction.performance}`;
+  cell.classList.add(
+    prediction.delta > 0 ? 'carrot-but-userscript-positive' : 'carrot-but-userscript-negative',
+  );
 }
 
 function getHandle(row: HTMLTableRowElement): string | null {

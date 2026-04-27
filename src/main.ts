@@ -1,6 +1,7 @@
 import { fetchContestStandings, fetchRatedUsers, fetchRatingChanges } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
-import { addFinalDeltaColumn, findStandingsTable } from './standings/table';
+import { predictFromCodeforces } from './rating/codeforces';
+import { addFinalDeltaColumn, addPredictedDeltaColumn, findStandingsTable } from './standings/table';
 import { installStandingsStyles } from './standings/style';
 
 const LOG_PREFIX = '[Carrot, But Userscript]';
@@ -26,24 +27,30 @@ async function main(): Promise<void> {
     );
   } catch (error) {
     console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
-    await probePredictionInputs(page.contestId);
+    const predictions = await predictContest(page.contestId);
+    addPredictedDeltaColumn(standings, predictions);
+    console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
+    return;
   }
 
   addFinalDeltaColumn(standings, finalDeltas);
   console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
 }
 
-async function probePredictionInputs(contestId: string): Promise<void> {
+async function predictContest(contestId: string) {
   const [standings, ratedUsers] = await Promise.all([
     fetchContestStandings(contestId),
     fetchRatedUsers(),
   ]);
 
-  console.info(`${LOG_PREFIX} Prediction inputs loaded:`, {
+  const predictions = predictFromCodeforces(standings, ratedUsers);
+  console.info(`${LOG_PREFIX} Prediction complete:`, {
     contest: standings.contest.name,
     rows: standings.rows.length,
     ratedUsers: ratedUsers.length,
+    predictions: predictions.length,
   });
+  return predictions;
 }
 
 void main();
