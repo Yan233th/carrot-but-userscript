@@ -8,6 +8,8 @@ import {
 } from './predict';
 
 const EDUCATIONAL_RATED_THRESHOLD = 2100;
+const RATING_PENDING_MAX_DAYS = 3;
+const UNRATED_CONTEST_NAME_HINTS = ['unrated', 'fools', 'q#', 'kotlin', 'marathon', 'teams'];
 
 export function predictFromCodeforces(
   standings: ContestStandings,
@@ -36,6 +38,22 @@ export function calculatePerformanceFromRatingChanges(ratingChanges: RatingChang
     rating: change.oldRating,
   }));
   return predictDeltasFromRanks(entries);
+}
+
+export function isPredictionEligible(standings: ContestStandings, nowMs = Date.now()): boolean {
+  if (isUnratedByName(standings.contest.name)) {
+    return false;
+  }
+  if (standings.rows.some((row) => row.party.teamId !== undefined || row.party.teamName !== undefined)) {
+    return false;
+  }
+  if (!standings.rows.some((row) => row.party.participantType === 'CONTESTANT')) {
+    return false;
+  }
+  if (isOldFinishedContest(standings, nowMs)) {
+    return false;
+  }
+  return true;
 }
 
 function getPredictionEntries(
@@ -76,4 +94,20 @@ function getPredictionEntries(
 
 function isEducationalRound(contestName: string): boolean {
   return contestName.toLowerCase().includes('educational');
+}
+
+function isUnratedByName(contestName: string): boolean {
+  const lowerName = contestName.toLowerCase();
+  return UNRATED_CONTEST_NAME_HINTS.some((hint) => lowerName.includes(hint));
+}
+
+function isOldFinishedContest(standings: ContestStandings, nowMs: number): boolean {
+  const { contest } = standings;
+  if (contest.phase !== 'FINISHED' || contest.startTimeSeconds === undefined) {
+    return false;
+  }
+
+  const contestEndMs = (contest.startTimeSeconds + contest.durationSeconds) * 1000;
+  const daysSinceEnd = (nowMs - contestEndMs) / (24 * 60 * 60 * 1000);
+  return daysSinceEnd > RATING_PENDING_MAX_DAYS;
 }

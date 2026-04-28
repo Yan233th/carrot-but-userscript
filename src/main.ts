@@ -1,6 +1,6 @@
 import { fetchContestStandings, fetchRatedUsers, fetchRatingChanges } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
-import { calculatePerformanceFromRatingChanges, predictFromCodeforces } from './rating/codeforces';
+import { calculatePerformanceFromRatingChanges, isPredictionEligible, predictFromCodeforces } from './rating/codeforces';
 import {
   addFinalRatingColumns,
   addLoadingColumn,
@@ -75,10 +75,12 @@ async function buildFinalResults(
 }
 
 async function predictContest(contestId: string) {
-  const [standings, ratedUsers] = await Promise.all([
-    fetchContestStandings(contestId),
-    loadRatedUsers(),
-  ]);
+  const standings = await fetchContestStandings(contestId);
+  if (!isPredictionEligible(standings)) {
+    return null;
+  }
+
+  const ratedUsers = await loadRatedUsers();
 
   const predictions = predictFromCodeforces(standings, ratedUsers);
   console.info(`${LOG_PREFIX} Prediction complete:`, {
