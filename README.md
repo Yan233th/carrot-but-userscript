@@ -31,7 +31,10 @@ The script adds three compact columns to the standings table:
 
 - `Π`: performance rating, showing the rating level your contest performance resembles.
 - `Δ`: rating change, showing how much rating is gained or lost.
-- `Rank`: rank movement. During prediction, it shows the delta needed for the next rank. After official rating changes are published, it shows actual rank changes or `—` for no change.
+- `Rank`: rank movement. During prediction, it shows the delta needed for the
+  next rank and lightly tints the cell when the predicted delta reaches that
+  threshold. After official rating changes are published, it shows actual rank
+  changes or `—` for no change.
 
 The headers show the current data state:
 
@@ -49,6 +52,10 @@ it with final or predicted rating data when the data is ready.
 The script uses Codeforces data available to the current page and public API. It
 does not bypass Codeforces permissions, hidden frozen-standings data, private gym
 access, or your account-specific friends list.
+
+Standings, submissions, hacks, rating changes, and prediction results are not
+cached. Each standings page load uses fresh Codeforces data for the current
+contest state.
 
 For finished contests, official `contest.ratingChanges` data is preferred. If
 the final standings are visible but rating changes have not been published yet,
@@ -93,7 +100,8 @@ The script asks Tampermonkey for storage permission so it can temporarily keep
 Codeforces rated-user data. This avoids fetching the same large list repeatedly
 while you move between standings pages.
 
-The cache is short-lived and overwritten when refreshed.
+Only the global rated-user list is kept briefly. Contest standings, submissions,
+hacks, rating changes, and prediction results are not stored.
 
 ## Development
 

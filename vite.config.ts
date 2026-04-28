@@ -13,7 +13,7 @@ export default defineConfig({
         namespace: 'https://github.com/Yan233th/carrot-but-userscript',
         version: userscriptVersion,
         author: 'Yan233_',
-        description: 'A Tampermonkey userscript for Codeforces rating prediction.',
+        description: 'Fast Codeforces rating predictions, final changes, and performance columns.',
         license: 'AGPL-3.0-or-later',
         homepageURL: 'https://github.com/Yan233th/carrot-but-userscript',
         supportURL: 'https://github.com/Yan233th/carrot-but-userscript/issues',
