@@ -3,9 +3,9 @@
 Carrot, But Userscript adds compact rating insight columns to Codeforces
 standings pages through Tampermonkey.
 
-Built for a **fast**, **responsive**, **lightweight**, and **stable** experience:
-no browser extension package, no extra panels, no settings menu, and no page
-takeover.
+Designed for a **fast**, **responsive**, **lightweight**, and **stable**
+standings experience. It does not install a browser extension package, add a
+settings page, or take over the Codeforces interface.
 
 ## Install
 
@@ -21,63 +21,76 @@ the userscript from the latest release manually:
 https://github.com/Yan233th/carrot-but-userscript/releases/latest/download/carrot-but-userscript.user.js
 ```
 
-Tampermonkey should open its install page automatically. After installation,
-open a supported Codeforces standings page and the script will add compact rating
-columns.
+After installation, open a supported Codeforces standings page. The script will
+add rating columns directly to the standings table.
 
-## What You See
+## What It Adds
 
-The script adds three compact columns to the standings table:
+The script adds three columns:
 
-- `Π`: performance rating, showing the rating level your contest performance resembles.
-- `Δ`: rating change, showing how much rating is gained or lost.
-- `Rank`: rank movement. During prediction, it shows the delta needed for the
-  next rank and lightly tints the cell when the predicted delta reaches that
-  threshold. After official rating changes are published, it shows actual rank
-  changes or `—` for no change.
+- `Π`: performance rating, showing the rating level the row's contest result
+  resembles.
+- `Δ`: rating change, showing predicted or official rating gain/loss.
+- `Rank`: rank movement. During prediction it shows the delta needed for the
+  next rank; after official rating changes are published it shows the actual
+  rank movement, or `—` for no change.
 
-The headers show the current data state:
+The columns appear in-place, beside the Codeforces standings table. Loading is
+shown immediately, then replaced with either final official data or predictions.
+Rows that cannot be matched show `N/A`.
 
-- Gray underlined headers mean data is loading.
-- Green headers mean official Codeforces rating changes are being shown.
-- Amber headers mean predictions are being shown before official changes are available.
-- `N/A` means the script could not calculate or find data for that row.
+## Data States
 
-The script is designed to stay out of the way and respond quickly. It only
-touches the standings table, shows a loading state immediately, and then replaces
-it with final or predicted rating data when the data is ready.
+The script has two main states:
 
-## Data And Limits
+- **Predicted**: shown while the contest is running, during system testing, or
+  after final standings are visible but official rating changes are not yet
+  published.
+- **Final**: shown after Codeforces publishes official rating changes. Official
+  `Δ` values come from Codeforces; performance is calculated from the final
+  standings and the official pre-contest ratings.
 
-The script uses Codeforces data available to the current page and public API. It
-does not bypass Codeforces permissions, hidden frozen-standings data, private gym
-access, or your account-specific friends list.
+Header color indicates the state:
 
-Prediction results are not cached. Stable API input data is cached with scoped
-TTLs and expired entries are pruned automatically. Standings data may be reused
-for up to 30 seconds during quick reloads. When `contest.standings` is
-unavailable, rebuilt fallback standings from `contest.status` use the same
-short-lived cache.
+- Gray underlined headers: loading.
+- Amber headers: predictions.
+- Green headers: official final rating changes.
 
-For finished contests, official `contest.ratingChanges` data is preferred. If
-the final standings are visible but rating changes have not been published yet,
-the script keeps showing predictions instead of pretending final data exists.
+## Cache
 
-When `contest.standings` is unavailable because of current Codeforces API access
-rules or temporary HTML/Cloudflare responses, the script can rebuild standings
-from `contest.status` as a fallback. This keeps active and just-finished rounds
-usable, but final official rating changes still come from Codeforces.
+The script keeps a small local cache in Tampermonkey storage to avoid repeated
+Codeforces API requests when you reload a standings page or move between related
+pages.
 
-## Acknowledgements
+Current cache behavior:
 
-Thanks to [meooow25/carrot](https://github.com/meooow25/carrot), the original
-browser extension for showing Codeforces rating deltas, rank-up deltas, rank
-changes, and performance ratings on standings pages.
+- Contest metadata: finished contests are cached for 24 hours; active contests
+  are not cached.
+- Standings: active or not-yet-final standings are cached for 30 seconds; final
+  standings are cached for 24 hours.
+- Rating changes: published official rating changes are cached for 24 hours;
+  empty pending responses are not cached.
+- Rated users: the Codeforces rated-user list is cached for 1 hour.
+- Empty pending rating-change responses, rendered table cells, and prediction
+  results are not stored.
 
-Thanks also to
-[wuyuqian114514/carrot-plus](https://github.com/wuyuqian114514/carrot-plus) for
-documenting and handling practical Codeforces behavior changes, including
-fallback data paths when `contest.standings` is unavailable.
+A small `Contest cache` panel shows cache hit/miss status for the current page.
+Its `Clear` button clears all cache entries created by this userscript.
+
+## Limits
+
+The script uses data available to the current page and the public Codeforces
+API. It does not bypass Codeforces permissions, hidden frozen standings, private
+gym access, or account-specific friends-list restrictions.
+
+When `contest.standings` is unavailable because of Codeforces API access rules
+or temporary HTML/Cloudflare responses, the script can rebuild usable standings
+from public contest submissions and hacks. This fallback is meant to keep active
+and just-finished contests usable; official final rating changes still come from
+Codeforces.
+
+Team contests, clearly unrated contests, and very old finished contests without
+official rating changes may show `N/A` instead of predictions.
 
 ## Supported Pages
 
@@ -87,25 +100,23 @@ including friends standings:
 - `https://codeforces.com/contest/*/standings*`
 - `https://codeforces.com/gym/*/standings*`
 
-It does not run on problem pages, submissions pages, profiles, or other
+It does not run on problem pages, submission pages, profiles, or other
 Codeforces pages.
 
 ## Updates
 
 Tampermonkey can update the script automatically from GitHub Releases. The
-installed script checks the small metadata file first, then downloads the full
-script only when a newer version is available.
+installed script checks a small metadata file first, then downloads the full
+`*.user.js` file only when a newer version is available.
 
-## Permissions
+## Acknowledgements
 
-The script asks Tampermonkey for storage permission so it can temporarily keep
-Codeforces rated-user data. This avoids fetching the same large list repeatedly
-while you move between standings pages.
+Thanks to [meooow25/carrot](https://github.com/meooow25/carrot), the original
+browser extension for Codeforces rating insight columns.
 
-The global rated-user list is kept briefly. Finished contest metadata, published
-official rating changes, and standings input data may be cached according to
-their update frequency. Pending rating changes, prediction results, and rendered
-table columns are not stored.
+Thanks also to
+[wuyuqian114514/carrot-plus](https://github.com/wuyuqian114514/carrot-plus) for
+documenting practical Codeforces behavior changes and fallback data paths.
 
 ## Development
 
