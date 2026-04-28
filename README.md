@@ -75,7 +75,13 @@ Current cache behavior:
   results are not stored.
 
 A small `Contest cache` panel shows cache hit/miss status for the current page.
-Its `Clear` button clears all cache entries created by this userscript.
+Its `Clear` button clears all current-version cache entries created by this
+userscript.
+
+If you upgraded from an early cache build and still see a browser error about a
+message exceeding `64MiB`, clear this userscript's Tampermonkey storage once.
+Current versions store cache entries separately to avoid that browser extension
+message-size limit.
 
 ## Limits
 
