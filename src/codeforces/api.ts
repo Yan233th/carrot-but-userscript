@@ -1,3 +1,5 @@
+import { rebuildContestStandings, shouldRebuildContestStandings } from './contest-standings-rebuild';
+
 const API_ROOT = 'https://codeforces.com/api/';
 
 interface ApiResponse<T> {
@@ -67,19 +69,29 @@ export async function fetchRatingChanges(contestId: string): Promise<RatingChang
 }
 
 export async function fetchContestStandings(contestId: string): Promise<ContestStandings> {
-  return await fetchApi<ContestStandings>('contest.standings', {
-    contestId,
-    showUnofficial: 'false',
-  });
+  try {
+    return await fetchApi<ContestStandings>('contest.standings', {
+      contestId,
+      showUnofficial: 'false',
+    });
+  } catch (error) {
+    if (!shouldRebuildContestStandings(error)) {
+      throw error;
+    }
+    return await rebuildContestStandings(contestId);
+  }
 }
 
 export async function fetchRatedUsers(): Promise<RatedUser[]> {
   return await fetchApi<RatedUser[]>('user.ratedList', { activeOnly: 'false' });
 }
 
-async function fetchApi<T>(method: string, query: Record<string, string>): Promise<T> {
+export async function fetchApi<T>(method: string, query: Record<string, string | undefined>): Promise<T> {
   const url = new URL(method, API_ROOT);
   for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) {
+      continue;
+    }
     url.searchParams.set(key, value);
   }
 

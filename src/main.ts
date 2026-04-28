@@ -75,12 +75,16 @@ async function buildFinalResults(
 }
 
 async function predictContest(contestId: string) {
+  const ratedUsersPromise = loadRatedUsers();
   const standings = await fetchContestStandings(contestId);
   if (!isPredictionEligible(standings)) {
+    ratedUsersPromise.catch((error: unknown) => {
+      console.info(`${LOG_PREFIX} Ignored rated users load after skipping prediction:`, error);
+    });
     return null;
   }
 
-  const ratedUsers = await loadRatedUsers();
+  const ratedUsers = await ratedUsersPromise;
 
   const predictions = predictFromCodeforces(standings, ratedUsers);
   console.info(`${LOG_PREFIX} Prediction complete:`, {
