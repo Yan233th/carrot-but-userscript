@@ -98,6 +98,19 @@ export async function fetchContestStandings(
   cache?: RebuiltStandingsCacheAdapter,
 ): Promise<ContestStandingsResult> {
   const startedAt = performance.now();
+  const cached = await cache?.get(contestId, gym);
+  if (cached) {
+    return {
+      source: 'status-rebuild-cache',
+      standings: cached.standings,
+      durationMs: performance.now() - startedAt,
+      statusPages: cached.statusPages,
+      submissions: cached.submissions,
+      officialSubmissions: cached.officialSubmissions,
+      hacks: cached.hacks,
+    };
+  }
+
   try {
     return {
       source: 'api',
@@ -110,18 +123,6 @@ export async function fetchContestStandings(
   } catch (error) {
     if (!shouldRebuildContestStandings(error)) {
       throw error;
-    }
-    const cached = await cache?.get(contestId, gym);
-    if (cached) {
-      return {
-        source: 'status-rebuild-cache',
-        standings: cached.standings,
-        durationMs: performance.now() - startedAt,
-        statusPages: cached.statusPages,
-        submissions: cached.submissions,
-        officialSubmissions: cached.officialSubmissions,
-        hacks: cached.hacks,
-      };
     }
 
     const rebuilt = await rebuildContestStandings(contestId, gym);
