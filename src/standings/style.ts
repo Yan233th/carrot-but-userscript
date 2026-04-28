@@ -12,6 +12,18 @@ export function installStandingsStyles(document: Document): void {
   min-width: 6.5em;
 }
 
+.carrot-but-userscript-rank-up-achieved {
+  background-color: #f2fff2;
+}
+
+.carrot-but-userscript-rank-up-achieved.dark {
+  background-color: #ebf8eb;
+}
+
+tr.highlighted-row .carrot-but-userscript-rank-up-achieved {
+  background-color: #d1eef2 !important;
+}
+
 .carrot-but-userscript-header {
   font-weight: bold;
 }

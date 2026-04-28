@@ -7,6 +7,7 @@ const PERFORMANCE_CELL_CLASS = 'carrot-but-userscript-performance-cell';
 const DELTA_CELL_CLASS = 'carrot-but-userscript-delta-cell';
 const RANK_CELL_CLASS = 'carrot-but-userscript-rank-cell';
 const RANK_HELPER_CLASS = 'carrot-but-userscript-rank-helper';
+const RANK_UP_ACHIEVED_CLASS = 'carrot-but-userscript-rank-up-achieved';
 const FINAL_HEADER_CLASS = 'carrot-but-userscript-header-final';
 const LOADING_HEADER_CLASS = 'carrot-but-userscript-header-loading';
 const PREDICTED_HEADER_CLASS = 'carrot-but-userscript-header-predicted';
@@ -313,6 +314,9 @@ function renderPredictedRankCell(
     makeArrowSpan('\u2191'),
     makeRankSpan(nextRank),
   ]);
+  if (prediction.delta >= effectiveRank.high - effectiveRating) {
+    cell.classList.add(RANK_UP_ACHIEVED_CLASS);
+  }
   return true;
 }
 
