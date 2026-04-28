@@ -2,7 +2,7 @@ import { type Contest, type ContestProblem, type ContestStandings, fetchApi, typ
 
 const PAGE_SIZE = 10000;
 
-interface ContestSubmission {
+export interface ContestSubmission {
   id: number;
   creationTimeSeconds: number;
   relativeTimeSeconds: number;
@@ -15,7 +15,7 @@ interface ContestSubmission {
   passedTestCount?: number;
 }
 
-interface ContestHack {
+export interface ContestHack {
   hacker?: Party & {
     participantId?: number;
     ghost?: boolean;
@@ -32,11 +32,20 @@ export function shouldRebuildContestStandings(error: unknown): boolean {
 }
 
 export async function rebuildContestStandings(contestId: string): Promise<ContestStandings> {
-  const [contest, allSubmissions, hacks] = await Promise.all([
-    fetchContest(contestId),
-    fetchContestSubmissions(contestId),
-    fetchContestHacks(contestId),
-  ]);
+  const contestPromise = fetchContest(contestId);
+  const submissionsPromise = fetchContestSubmissions(contestId);
+  const contest = await contestPromise;
+  const hacksPromise = contest.type === 'CF' ? fetchContestHacks(contestId) : Promise.resolve([]);
+  const [allSubmissions, hacks] = await Promise.all([submissionsPromise, hacksPromise]);
+
+  return buildContestStandingsFromStatus(contest, allSubmissions, hacks);
+}
+
+export function buildContestStandingsFromStatus(
+  contest: Contest,
+  allSubmissions: ContestSubmission[],
+  hacks: ContestHack[] = [],
+): ContestStandings {
   const submissions = allSubmissions.filter((submission) =>
     isOfficialSubmission(submission, contest.durationSeconds),
   );
