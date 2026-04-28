@@ -7,11 +7,6 @@ export function installStandingsStyles(document: Document): void {
   text-align: center;
 }
 
-.carrot-but-userscript-performance-cell {
-  width: 4.5em;
-  min-width: 4.5em;
-}
-
 .carrot-but-userscript-header {
   font-weight: bold;
 }

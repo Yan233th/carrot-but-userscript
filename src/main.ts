@@ -1,6 +1,6 @@
 import { fetchContestStandings, fetchRatedUsers, fetchRatingChanges } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
-import { calculatePerformanceFromCodeforces, predictFromCodeforces } from './rating/codeforces';
+import { calculatePerformanceFromRatingChanges, predictFromCodeforces } from './rating/codeforces';
 import {
   addFinalRatingColumns,
   addLoadingColumn,
@@ -33,7 +33,7 @@ async function main(): Promise<void> {
   let finalResults: Map<string, FinalRatingResult> | null = null;
   try {
     const ratingChanges = await fetchRatingChanges(page.contestId);
-    finalResults = await buildFinalResults(page.contestId, ratingChanges);
+    finalResults = await buildFinalResults(ratingChanges);
   } catch (error) {
     console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
     const predictions = await predictContest(page.contestId).catch((predictionError: unknown) => {
@@ -52,7 +52,6 @@ async function main(): Promise<void> {
 }
 
 async function buildFinalResults(
-  contestId: string,
   ratingChanges: Awaited<ReturnType<typeof fetchRatingChanges>>,
 ): Promise<Map<string, FinalRatingResult>> {
   const results = new Map<string, FinalRatingResult>(
@@ -62,16 +61,7 @@ async function buildFinalResults(
     ]),
   );
 
-  const oldRatings = new Map(ratingChanges.map((change) => [change.handle, change.oldRating]));
-  const standings = await fetchContestStandings(contestId).catch((error: unknown) => {
-    console.info(`${LOG_PREFIX} Final performance unavailable:`, error);
-    return null;
-  });
-  if (!standings) {
-    return results;
-  }
-
-  for (const prediction of calculatePerformanceFromCodeforces(standings, oldRatings)) {
+  for (const prediction of calculatePerformanceFromRatingChanges(ratingChanges)) {
     const result = results.get(prediction.handle);
     if (result) {
       result.performance = prediction.performance;

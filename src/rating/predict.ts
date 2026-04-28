@@ -22,6 +22,12 @@ export interface PredictionInput {
   rating: number | null;
 }
 
+export interface RankedPredictionInput {
+  handle: string;
+  rank: number;
+  rating: number | null;
+}
+
 export interface Prediction {
   handle: string;
   rating: number | null;
@@ -41,6 +47,21 @@ export function predictDeltas(entries: PredictionInput[]): Prediction[] {
   const seeds = buildSeeds(contestants);
 
   assignRanks(contestants);
+  calculate(contestants, seeds);
+
+  return toPredictions(contestants);
+}
+
+export function predictDeltasFromRanks(entries: RankedPredictionInput[]): Prediction[] {
+  const contestants = entries.map(toRankedMutableContestant);
+  const seeds = buildSeeds(contestants);
+
+  calculate(contestants, seeds);
+
+  return toPredictions(contestants);
+}
+
+function calculate(contestants: MutableContestant[], seeds: number[]): void {
   for (const contestant of contestants) {
     contestant.delta = calculateDelta(contestant, contestant.effectiveRating, seeds);
   }
@@ -49,7 +70,9 @@ export function predictDeltas(entries: PredictionInput[]): Prediction[] {
   for (const contestant of contestants) {
     contestant.performance = calculatePerformance(contestant, seeds, adjustment);
   }
+}
 
+function toPredictions(contestants: MutableContestant[]): Prediction[] {
   return contestants.map(({ handle, rating, delta, performance }) => ({
     handle,
     rating,
@@ -63,6 +86,19 @@ function toMutableContestant(entry: PredictionInput): MutableContestant {
     ...entry,
     effectiveRating: entry.rating ?? DEFAULT_RATING,
     rank: 0,
+    delta: 0,
+    performance: 0,
+  };
+}
+
+function toRankedMutableContestant(entry: RankedPredictionInput): MutableContestant {
+  return {
+    handle: entry.handle,
+    points: 0,
+    penalty: 0,
+    rating: entry.rating,
+    effectiveRating: entry.rating ?? DEFAULT_RATING,
+    rank: entry.rank,
     delta: 0,
     performance: 0,
   };

@@ -1,5 +1,11 @@
-import type { ContestStandings, RatedUser } from '../codeforces/api';
-import { type Prediction, type PredictionInput, predictDeltas } from './predict';
+import type { ContestStandings, RatedUser, RatingChange } from '../codeforces/api';
+import {
+  type Prediction,
+  type PredictionInput,
+  type RankedPredictionInput,
+  predictDeltas,
+  predictDeltasFromRanks,
+} from './predict';
 
 const EDUCATIONAL_RATED_THRESHOLD = 2100;
 
@@ -21,6 +27,15 @@ export function calculatePerformanceFromCodeforces(
   ratings: Map<string, number>,
 ): Prediction[] {
   return predictDeltas(getPredictionEntries(standings, ratings, { includeUnrated: false }));
+}
+
+export function calculatePerformanceFromRatingChanges(ratingChanges: RatingChange[]): Prediction[] {
+  const entries: RankedPredictionInput[] = ratingChanges.map((change) => ({
+    handle: change.handle,
+    rank: change.rank,
+    rating: change.oldRating,
+  }));
+  return predictDeltasFromRanks(entries);
 }
 
 function getPredictionEntries(
