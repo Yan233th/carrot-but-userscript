@@ -63,6 +63,10 @@ export interface ContestStandingsResult {
   source: 'api' | 'status-rebuild';
   standings: ContestStandings;
   durationMs: number;
+  statusPages?: number;
+  submissions?: number;
+  officialSubmissions?: number;
+  hacks?: number;
 }
 
 export interface RatedUser {
@@ -98,10 +102,15 @@ export async function fetchContestStandings(contestId: string, gym: boolean): Pr
     if (!shouldRebuildContestStandings(error)) {
       throw error;
     }
+    const rebuilt = await rebuildContestStandings(contestId, gym);
     return {
       source: 'status-rebuild',
-      standings: await rebuildContestStandings(contestId, gym),
+      standings: rebuilt.standings,
       durationMs: performance.now() - startedAt,
+      statusPages: rebuilt.statusPages,
+      submissions: rebuilt.submissions,
+      officialSubmissions: rebuilt.officialSubmissions,
+      hacks: rebuilt.hacks,
     };
   }
 }

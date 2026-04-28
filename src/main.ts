@@ -84,6 +84,10 @@ async function main(): Promise<void> {
     standings: contestStandingsResult ? standingsMode(contestStandingsResult) : 'unavailable',
     source: contestStandingsResult ? standingsSource(contestStandingsResult) : 'unavailable',
     rows: contestStandingsResult?.standings.rows.length ?? 0,
+    statusPages: contestStandingsResult?.statusPages,
+    submissions: contestStandingsResult?.submissions,
+    officialSubmissions: contestStandingsResult?.officialSubmissions,
+    hacks: contestStandingsResult?.hacks,
     rendered: renderRatio(stats),
     stepMs: contestStandingsResult ? ms(contestStandingsResult.durationMs) : undefined,
   });
@@ -136,9 +140,15 @@ async function loadRatedUsers() {
 
 function logProgress(stage: string, startedAt: number, details: Record<string, string | number | undefined>): void {
   console.info(`${LOG_PREFIX} ${stage}`, {
-    ...details,
+    ...withoutUndefined(details),
     totalMs: durationMs(startedAt),
   });
+}
+
+function withoutUndefined(details: Record<string, string | number | undefined>): Record<string, string | number> {
+  return Object.fromEntries(
+    Object.entries(details).filter((entry): entry is [string, string | number] => entry[1] !== undefined),
+  );
 }
 
 function standingsSource(result: ContestStandingsResult): string {

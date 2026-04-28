@@ -23,6 +23,14 @@ export interface ContestHack {
   verdict: string;
 }
 
+export interface RebuiltContestStandings {
+  standings: ContestStandings;
+  statusPages: number;
+  submissions: number;
+  officialSubmissions: number;
+  hacks: number;
+}
+
 export function shouldRebuildContestStandings(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
   return message.includes('authenticated') ||
@@ -31,14 +39,23 @@ export function shouldRebuildContestStandings(error: unknown): boolean {
     message.includes('invalid json');
 }
 
-export async function rebuildContestStandings(contestId: string, gym: boolean): Promise<ContestStandings> {
+export async function rebuildContestStandings(contestId: string, gym: boolean): Promise<RebuiltContestStandings> {
   const contestPromise = fetchContest(contestId, gym);
   const submissionsPromise = fetchContestSubmissions(contestId);
   const contest = await contestPromise;
   const hacksPromise = contest.type === 'CF' ? fetchContestHacks(contestId) : Promise.resolve([]);
-  const [allSubmissions, hacks] = await Promise.all([submissionsPromise, hacksPromise]);
+  const [status, hacks] = await Promise.all([submissionsPromise, hacksPromise]);
+  const officialSubmissions = status.submissions.filter((submission) =>
+    isOfficialSubmission(submission, contest.durationSeconds),
+  );
 
-  return buildContestStandingsFromStatus(contest, allSubmissions, hacks);
+  return {
+    standings: buildContestStandings(contest, officialSubmissions, hacks),
+    statusPages: status.pages,
+    submissions: status.submissions.length,
+    officialSubmissions: officialSubmissions.length,
+    hacks: hacks.length,
+  };
 }
 
 export function buildContestStandingsFromStatus(
@@ -49,8 +66,15 @@ export function buildContestStandingsFromStatus(
   const submissions = allSubmissions.filter((submission) =>
     isOfficialSubmission(submission, contest.durationSeconds),
   );
-  const rows = buildRows(submissions, contest);
+  return buildContestStandings(contest, submissions, hacks);
+}
 
+function buildContestStandings(
+  contest: Contest,
+  submissions: ContestSubmission[],
+  hacks: ContestHack[],
+): ContestStandings {
+  const rows = buildRows(submissions, contest);
   if (contest.type === 'CF') {
     applyHackScores(hacks, rows);
   }
@@ -65,17 +89,19 @@ export function buildContestStandingsFromStatus(
   };
 }
 
-async function fetchContestSubmissions(contestId: string): Promise<ContestSubmission[]> {
+async function fetchContestSubmissions(contestId: string): Promise<{ submissions: ContestSubmission[]; pages: number }> {
   const submissions: ContestSubmission[] = [];
+  let pages = 0;
   for (let from = 1; ; from += PAGE_SIZE) {
     const page = await fetchApi<ContestSubmission[]>('contest.status', {
       contestId,
       from: String(from),
       count: String(PAGE_SIZE),
     });
+    pages += 1;
     submissions.push(...page);
     if (page.length < PAGE_SIZE) {
-      return submissions;
+      return { submissions, pages };
     }
   }
 }
