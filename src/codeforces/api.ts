@@ -59,6 +59,12 @@ export interface ContestStandings {
   rows: StandingsRow[];
 }
 
+export interface ContestStandingsResult {
+  source: 'api' | 'status-rebuild';
+  standings: ContestStandings;
+  durationMs: number;
+}
+
 export interface RatedUser {
   handle: string;
   rating: number;
@@ -77,17 +83,26 @@ export async function fetchRatingChanges(contestId: string): Promise<RatingChang
   return await fetchApi<RatingChange[]>('contest.ratingChanges', { contestId });
 }
 
-export async function fetchContestStandings(contestId: string, gym: boolean): Promise<ContestStandings> {
+export async function fetchContestStandings(contestId: string, gym: boolean): Promise<ContestStandingsResult> {
+  const startedAt = performance.now();
   try {
-    return await fetchApi<ContestStandings>('contest.standings', {
-      contestId,
-      showUnofficial: 'false',
-    });
+    return {
+      source: 'api',
+      standings: await fetchApi<ContestStandings>('contest.standings', {
+        contestId,
+        showUnofficial: 'false',
+      }),
+      durationMs: performance.now() - startedAt,
+    };
   } catch (error) {
     if (!shouldRebuildContestStandings(error)) {
       throw error;
     }
-    return await rebuildContestStandings(contestId, gym);
+    return {
+      source: 'status-rebuild',
+      standings: await rebuildContestStandings(contestId, gym),
+      durationMs: performance.now() - startedAt,
+    };
   }
 }
 

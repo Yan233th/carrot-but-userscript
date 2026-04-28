@@ -1,4 +1,4 @@
-import { fetchContest, fetchContestStandings, fetchRatedUsers, fetchRatingChanges, type ContestStandings } from './codeforces/api';
+import { fetchContest, fetchContestStandings, fetchRatedUsers, fetchRatingChanges, type ContestStandings, type ContestStandingsResult } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
 import { calculatePerformanceFromRatingChanges, isPredictionEligible, predictFromCodeforces } from './rating/codeforces';
 import {
@@ -16,6 +16,7 @@ import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-
 const LOG_PREFIX = '[Carrot, But Userscript]';
 
 async function main(): Promise<void> {
+  const startedAt = performance.now();
   const page = getStandingsPage(window.location);
   if (!page) {
     return;
@@ -30,41 +31,62 @@ async function main(): Promise<void> {
   installStandingsStyles(document);
   clearCarrotColumns(standings);
   addLoadingColumn(standings);
+  logProgress('start', startedAt, { contestId: page.contestId, page: page.gym ? 'gym' : 'contest' });
 
+  const metadataStartedAt = performance.now();
   const contest = await fetchContest(page.contestId, page.gym).catch((error: unknown) => {
     console.error(`${LOG_PREFIX} Contest unavailable:`, error);
     return null;
   });
+  if (contest) {
+    logProgress('metadata', startedAt, {
+      phase: contest.phase,
+      source: 'contest.list',
+      stepMs: durationMs(metadataStartedAt),
+    });
+  }
 
   if (contest?.phase === 'FINISHED') {
     try {
+      const finalStartedAt = performance.now();
       const ratingChanges = await fetchRatingChanges(page.contestId);
       const finalResults = await buildFinalResults(ratingChanges);
       clearCarrotColumns(standings);
-      logRenderStats('final', addFinalRatingColumns(standings, finalResults));
-      console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
+      const stats = addFinalRatingColumns(standings, finalResults);
+      logProgress('final', startedAt, {
+        source: 'contest.ratingChanges',
+        changes: ratingChanges.length,
+        rendered: renderRatio(stats),
+        stepMs: durationMs(finalStartedAt),
+      });
       return;
     } catch (error) {
       console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
     }
   }
 
-  const contestStandings = contest
+  const contestStandingsResult = contest
     ? await fetchContestStandings(page.contestId, page.gym).catch((error: unknown) => {
       console.error(`${LOG_PREFIX} Standings unavailable:`, error);
       return null;
     })
     : null;
 
-  const predictions = contestStandings
-    ? await predictContest(contestStandings).catch((predictionError: unknown) => {
+  const predictions = contestStandingsResult
+    ? await predictContest(contestStandingsResult.standings).catch((predictionError: unknown) => {
       console.error(`${LOG_PREFIX} Prediction failed:`, predictionError);
       return null;
     })
     : null;
   clearCarrotColumns(standings);
-  logRenderStats('predicted', addPredictedRatingColumns(standings, predictions));
-  console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
+  const stats = addPredictedRatingColumns(standings, predictions);
+  logProgress('prediction', startedAt, {
+    standings: contestStandingsResult ? standingsMode(contestStandingsResult) : 'unavailable',
+    source: contestStandingsResult ? standingsSource(contestStandingsResult) : 'unavailable',
+    rows: contestStandingsResult?.standings.rows.length ?? 0,
+    rendered: renderRatio(stats),
+    stepMs: contestStandingsResult ? ms(contestStandingsResult.durationMs) : undefined,
+  });
 }
 
 async function buildFinalResults(
@@ -98,33 +120,45 @@ async function predictContest(standings: ContestStandings) {
   const ratedUsers = await loadRatedUsers();
 
   const predictions = predictFromCodeforces(standings, ratedUsers);
-  console.info(`${LOG_PREFIX} Prediction complete:`, {
-    contest: standings.contest.name,
-    rows: standings.rows.length,
-    ratedUsers: ratedUsers.length,
-    predictions: predictions.length,
-  });
   return predictions;
 }
 
 async function loadRatedUsers() {
   const cachedUsers = await getCachedRatedUsers();
   if (cachedUsers) {
-    console.info(`${LOG_PREFIX} Using cached rated users:`, cachedUsers.length);
     return cachedUsers;
   }
 
   const users = await fetchRatedUsers();
   await setCachedRatedUsers(users);
-  console.info(`${LOG_PREFIX} Cached rated users:`, users.length);
   return users;
 }
 
-function logRenderStats(mode: 'final' | 'predicted', stats: ColumnRenderStats): void {
-  console.info(`${LOG_PREFIX} Rendered ${mode} rating columns:`, {
-    matchedRows: stats.matchedRows,
-    dataRows: stats.dataRows,
+function logProgress(stage: string, startedAt: number, details: Record<string, string | number | undefined>): void {
+  console.info(`${LOG_PREFIX} ${stage}`, {
+    ...details,
+    totalMs: durationMs(startedAt),
   });
+}
+
+function standingsSource(result: ContestStandingsResult): string {
+  return result.source === 'api' ? 'contest.standings' : 'contest.status';
+}
+
+function standingsMode(result: ContestStandingsResult): string {
+  return result.source === 'api' ? 'api' : 'fallback';
+}
+
+function renderRatio(stats: ColumnRenderStats): string {
+  return `${stats.matchedRows}/${stats.dataRows}`;
+}
+
+function durationMs(startedAt: number): number {
+  return ms(performance.now() - startedAt);
+}
+
+function ms(duration: number): number {
+  return Math.round(duration);
 }
 
 void main();
