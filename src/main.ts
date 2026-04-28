@@ -27,6 +27,7 @@ async function main(): Promise<void> {
   }
 
   installStandingsStyles(document);
+  clearCarrotColumns(standings);
   addLoadingColumn(standings);
   let finalDeltas: Map<string, number> | null = null;
   try {
