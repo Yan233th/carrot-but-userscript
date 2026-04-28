@@ -1,20 +1,20 @@
 import { GM_getValue, GM_setValue } from 'vite-plugin-monkey/dist/client';
-import type { RebuiltContestStandings } from '../codeforces/contest-standings-rebuild';
+import type { CachedContestStandings } from '../codeforces/api';
 
-const CACHE_KEY = 'cache.rebuilt-standings.v2';
+const CACHE_KEY = 'cache.standings.v1';
 const CACHE_TTL_MS = 30 * 1000;
 
-interface RebuiltStandingsCacheEntry {
+interface StandingsCacheEntry {
   savedAt: number;
-  result: RebuiltContestStandings;
+  result: CachedContestStandings;
 }
 
-type RebuiltStandingsCache = Record<string, RebuiltStandingsCacheEntry>;
+type StandingsCache = Record<string, StandingsCacheEntry>;
 
-export async function getCachedRebuiltStandings(
+export async function getCachedContestStandings(
   contestId: string,
   gym: boolean,
-): Promise<RebuiltContestStandings | null> {
+): Promise<CachedContestStandings | null> {
   const cache = await getCache();
   const entry = cache[entryKey(contestId, gym)];
   if (!entry || Date.now() - entry.savedAt > CACHE_TTL_MS) {
@@ -25,10 +25,10 @@ export async function getCachedRebuiltStandings(
   return entry.result;
 }
 
-export async function setCachedRebuiltStandings(
+export async function setCachedContestStandings(
   contestId: string,
   gym: boolean,
-  result: RebuiltContestStandings,
+  result: CachedContestStandings,
 ): Promise<void> {
   const cache = await getCache();
   cache[entryKey(contestId, gym)] = {
@@ -38,11 +38,11 @@ export async function setCachedRebuiltStandings(
   await pruneCache(cache);
 }
 
-async function getCache(): Promise<RebuiltStandingsCache> {
-  return await GM_getValue(CACHE_KEY, {}) as RebuiltStandingsCache;
+async function getCache(): Promise<StandingsCache> {
+  return await GM_getValue(CACHE_KEY, {}) as StandingsCache;
 }
 
-async function pruneCache(cache: RebuiltStandingsCache): Promise<void> {
+async function pruneCache(cache: StandingsCache): Promise<void> {
   const now = Date.now();
   const freshCache = Object.fromEntries(
     Object.entries(cache).filter(([, entry]) => now - entry.savedAt <= CACHE_TTL_MS),

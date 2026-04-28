@@ -13,7 +13,7 @@ import {
 } from './standings/table';
 import { installStandingsStyles } from './standings/style';
 import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
-import { getCachedRebuiltStandings, setCachedRebuiltStandings } from './storage/rebuilt-standings-cache';
+import { getCachedContestStandings, setCachedContestStandings } from './storage/standings-cache';
 
 const LOG_PREFIX = '[Carrot, But Userscript]';
 
@@ -91,8 +91,8 @@ async function main(): Promise<void> {
 
   const contestStandingsResult = contest
     ? await fetchContestStandings(page.contestId, page.gym, {
-      get: getCachedRebuiltStandings,
-      set: setCachedRebuiltStandings,
+      get: getCachedContestStandings,
+      set: setCachedContestStandings,
     }).catch((error: unknown) => {
       console.error(`${LOG_PREFIX} Standings unavailable:`, error);
       return null;
@@ -188,16 +188,19 @@ function standingsSource(result: ContestStandingsResult): string {
   if (result.source === 'api') {
     return 'contest.standings';
   }
+  if (result.source === 'api-cache') {
+    return 'contest.standings-cache';
+  }
   return result.source === 'status-rebuild-cache' ? 'contest.status-cache' : 'contest.status';
 }
 
 function cacheState(result: ContestStandingsResult): string {
-  return result.source === 'status-rebuild-cache' ? 'hit' : 'miss';
+  return result.source.endsWith('-cache') ? 'hit' : 'miss';
 }
 
 function standingsMode(result: ContestStandingsResult): string {
-  if (result.source === 'api') {
-    return 'api';
+  if (result.source === 'api' || result.source === 'api-cache') {
+    return result.source === 'api-cache' ? 'api-cache' : 'api';
   }
   return result.source === 'status-rebuild-cache' ? 'fallback-cache' : 'fallback';
 }

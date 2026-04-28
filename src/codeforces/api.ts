@@ -1,4 +1,4 @@
-import { rebuildContestStandings, shouldRebuildContestStandings, type RebuiltContestStandings } from './contest-standings-rebuild';
+import { rebuildContestStandings, shouldRebuildContestStandings } from './contest-standings-rebuild';
 
 const API_ROOT = 'https://codeforces.com/api/';
 
@@ -60,7 +60,7 @@ export interface ContestStandings {
 }
 
 export interface ContestStandingsResult {
-  source: 'api' | 'status-rebuild' | 'status-rebuild-cache';
+  source: 'api' | 'api-cache' | 'status-rebuild' | 'status-rebuild-cache';
   standings: ContestStandings;
   durationMs: number;
   statusPages?: number;
@@ -69,9 +69,13 @@ export interface ContestStandingsResult {
   hacks?: number;
 }
 
-export interface RebuiltStandingsCacheAdapter {
-  get: (contestId: string, gym: boolean) => Promise<RebuiltContestStandings | null>;
-  set: (contestId: string, gym: boolean, result: RebuiltContestStandings) => Promise<void>;
+export type CachedContestStandings = Omit<ContestStandingsResult, 'durationMs' | 'source'> & {
+  source: 'api' | 'status-rebuild';
+};
+
+export interface ContestStandingsCacheAdapter {
+  get: (contestId: string, gym: boolean) => Promise<CachedContestStandings | null>;
+  set: (contestId: string, gym: boolean, result: CachedContestStandings) => Promise<void>;
 }
 
 export interface RatedUser {
@@ -95,13 +99,13 @@ export async function fetchRatingChanges(contestId: string): Promise<RatingChang
 export async function fetchContestStandings(
   contestId: string,
   gym: boolean,
-  cache?: RebuiltStandingsCacheAdapter,
+  cache?: ContestStandingsCacheAdapter,
 ): Promise<ContestStandingsResult> {
   const startedAt = performance.now();
   const cached = await cache?.get(contestId, gym);
   if (cached) {
     return {
-      source: 'status-rebuild-cache',
+      source: cached.source === 'api' ? 'api-cache' : 'status-rebuild-cache',
       standings: cached.standings,
       durationMs: performance.now() - startedAt,
       statusPages: cached.statusPages,
@@ -112,12 +116,17 @@ export async function fetchContestStandings(
   }
 
   try {
+    const standings = await fetchApi<ContestStandings>('contest.standings', {
+      contestId,
+      showUnofficial: 'false',
+    });
+    await cache?.set(contestId, gym, {
+      source: 'api',
+      standings,
+    });
     return {
       source: 'api',
-      standings: await fetchApi<ContestStandings>('contest.standings', {
-        contestId,
-        showUnofficial: 'false',
-      }),
+      standings,
       durationMs: performance.now() - startedAt,
     };
   } catch (error) {
@@ -126,7 +135,10 @@ export async function fetchContestStandings(
     }
 
     const rebuilt = await rebuildContestStandings(contestId, gym);
-    await cache?.set(contestId, gym, rebuilt);
+    await cache?.set(contestId, gym, {
+      source: 'status-rebuild',
+      ...rebuilt,
+    });
     return {
       source: 'status-rebuild',
       standings: rebuilt.standings,
