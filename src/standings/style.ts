@@ -64,18 +64,24 @@ tr.highlighted-row .carrot-but-userscript-rank-up-achieved {
 }
 
 .carrot-but-userscript-rank-helper {
+  align-items: center;
+  display: inline-flex;
   font-weight: bold;
+}
+
+.carrot-but-userscript-rank-delta {
+  line-height: 1;
 }
 
 .carrot-but-userscript-rank-abbr {
   display: inline-block;
-  vertical-align: middle;
+  line-height: 1;
 }
 
 .carrot-but-userscript-rank-arrow {
+  line-height: 1;
   padding-left: 0.5em;
   padding-right: 0.5em;
-  vertical-align: middle;
 }
 `;
   document.head.append(style);

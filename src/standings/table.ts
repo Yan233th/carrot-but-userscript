@@ -344,7 +344,7 @@ function appendRankHelper(cell: HTMLElement, children: HTMLElement[]): void {
 function makeDeltaSpan(delta: number): HTMLSpanElement {
   const span = document.createElement('span');
   span.textContent = formatDelta(delta);
-  span.classList.add(delta > 0 ? 'carrot-but-userscript-positive' : 'carrot-but-userscript-negative');
+  span.classList.add('carrot-but-userscript-rank-delta', delta > 0 ? 'carrot-but-userscript-positive' : 'carrot-but-userscript-negative');
   return span;
 }
 
