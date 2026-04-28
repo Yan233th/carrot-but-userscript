@@ -1,15 +1,19 @@
 # Carrot, But Userscript
 
-Carrot, But Userscript adds a rating change column to Codeforces standings pages
-through Tampermonkey. It is inspired by
-[meooow25/carrot](https://github.com/meooow25/carrot), but runs as a userscript
-instead of a browser extension.
+Carrot, But Userscript adds a responsive rating change column to Codeforces
+standings pages through Tampermonkey. It is intentionally lightweight and
+minimal: no extension package, no extra panels, no settings menu, and no page
+takeover.
+
+It is inspired by [meooow25/carrot](https://github.com/meooow25/carrot), but
+runs as a userscript instead of a browser extension.
 
 ## Install
 
 [![Install Userscript](https://img.shields.io/badge/Install-Userscript-2f8f46)](https://github.com/Yan233th/carrot-but-userscript/releases/latest/download/carrot-but-userscript.user.js)
 
-Install the userscript from the latest release:
+Click the button above to open Tampermonkey's one-click install page, or install
+the userscript from the latest release manually:
 
 ```text
 https://github.com/Yan233th/carrot-but-userscript/releases/latest/download/carrot-but-userscript.user.js
@@ -27,8 +31,9 @@ The added `Δ` column shows rating changes beside each participant.
 - Amber `Δ`: predicted rating changes before final results are available.
 - `N/A`: the script could not calculate or find a rating change for that row.
 
-The script is designed to stay out of the way: it does not add menus, buttons, or
-extra panels. It only changes the standings table.
+The script is designed to stay out of the way and respond quickly. It only
+touches the standings table, shows a loading state immediately, and then replaces
+it with final or predicted rating changes when the data is ready.
 
 ## Supported Pages
 
@@ -67,4 +72,6 @@ bun install
 bun run build
 ```
 
-The generated userscript is written to `dist/`.
+The generated files are written to `dist/`. The `*.user.js` file is the
+userscript that can be installed directly in Tampermonkey; the `*.meta.js` file
+is metadata for update checks.
