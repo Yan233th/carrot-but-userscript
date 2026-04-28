@@ -55,7 +55,7 @@ access, or your account-specific friends list.
 
 Prediction results are not cached. When `contest.standings` is unavailable, the
 rebuilt fallback standings from `contest.status` may be reused for up to 30
-seconds to avoid repeated heavy API fetches during quick reloads.
+seconds during quick reloads, and expired entries are pruned automatically.
 
 For finished contests, official `contest.ratingChanges` data is preferred. If
 the final standings are visible but rating changes have not been published yet,
@@ -101,8 +101,8 @@ Codeforces rated-user data. This avoids fetching the same large list repeatedly
 while you move between standings pages.
 
 The global rated-user list is kept briefly. Rebuilt fallback standings may be
-kept for up to 30 seconds. Prediction results and rendered table columns are not
-stored.
+kept for up to 30 seconds, with expired entries pruned automatically. Prediction
+results and rendered table columns are not stored.
 
 ## Development
 
