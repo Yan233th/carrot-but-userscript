@@ -98,6 +98,9 @@ async function main(): Promise<void> {
       return null;
     })
     : null;
+  if (contestStandingsResult) {
+    logStandingsResult('standings', startedAt, contestStandingsResult);
+  }
 
   const predictionResult = contestStandingsResult
     ? await predictContest(contestStandingsResult.standings).catch((predictionError: unknown): PredictionResult => {
@@ -122,6 +125,20 @@ async function main(): Promise<void> {
     hacks: contestStandingsResult?.hacks,
     rendered: renderRatio(stats),
     stepMs: contestStandingsResult ? ms(contestStandingsResult.durationMs) : undefined,
+  });
+}
+
+function logStandingsResult(stage: string, startedAt: number, result: ContestStandingsResult): void {
+  logProgress(stage, startedAt, {
+    cache: cacheState(result),
+    standings: standingsMode(result),
+    source: standingsSource(result),
+    rows: result.standings.rows.length,
+    statusPages: result.statusPages,
+    submissions: result.submissions,
+    officialSubmissions: result.officialSubmissions,
+    hacks: result.hacks,
+    stepMs: ms(result.durationMs),
   });
 }
 
