@@ -1,6 +1,7 @@
 import { fetchContest, fetchContestStandings, fetchRatedUsers, fetchRatingChanges, type ContestStandings, type ContestStandingsResult } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
-import { calculatePerformanceFromRatingChanges, isPredictionEligible, predictFromCodeforces } from './rating/codeforces';
+import { calculatePerformanceFromRatingChanges, getPredictionSkipReason, predictFromCodeforces } from './rating/codeforces';
+import type { Prediction } from './rating/predict';
 import {
   addFinalRatingColumns,
   addLoadingColumn,
@@ -14,6 +15,12 @@ import { installStandingsStyles } from './standings/style';
 import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
 
 const LOG_PREFIX = '[Carrot, But Userscript]';
+
+interface PredictionResult {
+  predictions: Prediction[] | null;
+  status: 'ok' | 'skipped' | 'failed' | 'unavailable';
+  reason?: string;
+}
 
 async function main(): Promise<void> {
   const startedAt = performance.now();
@@ -32,6 +39,7 @@ async function main(): Promise<void> {
   clearCarrotColumns(standings);
   addLoadingColumn(standings);
   logProgress('start', startedAt, { contestId: page.contestId, page: page.gym ? 'gym' : 'contest' });
+  let ratingStatus: 'published' | 'pending' | 'not-finished' | 'unknown' = 'unknown';
 
   const metadataStartedAt = performance.now();
   const contest = await fetchContest(page.contestId, page.gym).catch((error: unknown) => {
@@ -44,23 +52,38 @@ async function main(): Promise<void> {
       source: 'contest.list',
       stepMs: durationMs(metadataStartedAt),
     });
+    if (contest.phase !== 'FINISHED') {
+      ratingStatus = 'not-finished';
+    }
   }
 
   if (contest?.phase === 'FINISHED') {
     try {
       const finalStartedAt = performance.now();
       const ratingChanges = await fetchRatingChanges(page.contestId);
-      const finalResults = await buildFinalResults(ratingChanges);
-      clearCarrotColumns(standings);
-      const stats = addFinalRatingColumns(standings, finalResults);
-      logProgress('final', startedAt, {
-        source: 'contest.ratingChanges',
-        changes: ratingChanges.length,
-        rendered: renderRatio(stats),
-        stepMs: durationMs(finalStartedAt),
-      });
-      return;
+      if (ratingChanges.length === 0) {
+        ratingStatus = 'pending';
+        logProgress('rating', startedAt, {
+          status: ratingStatus,
+          source: 'contest.ratingChanges',
+          changes: 0,
+          stepMs: durationMs(finalStartedAt),
+        });
+      } else {
+        const finalResults = await buildFinalResults(ratingChanges);
+        ratingStatus = 'published';
+        clearCarrotColumns(standings);
+        const stats = addFinalRatingColumns(standings, finalResults);
+        logProgress('final', startedAt, {
+          source: 'contest.ratingChanges',
+          changes: ratingChanges.length,
+          rendered: renderRatio(stats),
+          stepMs: durationMs(finalStartedAt),
+        });
+        return;
+      }
     } catch (error) {
+      ratingStatus = 'pending';
       console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
     }
   }
@@ -72,15 +95,19 @@ async function main(): Promise<void> {
     })
     : null;
 
-  const predictions = contestStandingsResult
-    ? await predictContest(contestStandingsResult.standings).catch((predictionError: unknown) => {
+  const predictionResult = contestStandingsResult
+    ? await predictContest(contestStandingsResult.standings).catch((predictionError: unknown): PredictionResult => {
       console.error(`${LOG_PREFIX} Prediction failed:`, predictionError);
-      return null;
+      return { predictions: null, status: 'failed', reason: errorReason(predictionError) };
     })
-    : null;
+    : { predictions: null, status: 'unavailable', reason: 'standings-unavailable' };
   clearCarrotColumns(standings);
-  const stats = addPredictedRatingColumns(standings, predictions);
+  const stats = addPredictedRatingColumns(standings, predictionResult.predictions);
   logProgress('prediction', startedAt, {
+    prediction: predictionResult.status,
+    reason: predictionResult.reason,
+    rating: ratingStatus,
+    predictions: predictionResult.predictions?.length ?? 0,
     standings: contestStandingsResult ? standingsMode(contestStandingsResult) : 'unavailable',
     source: contestStandingsResult ? standingsSource(contestStandingsResult) : 'unavailable',
     rows: contestStandingsResult?.standings.rows.length ?? 0,
@@ -116,15 +143,16 @@ async function buildFinalResults(
   return results;
 }
 
-async function predictContest(standings: ContestStandings) {
-  if (!isPredictionEligible(standings)) {
-    return null;
+async function predictContest(standings: ContestStandings): Promise<PredictionResult> {
+  const skipReason = getPredictionSkipReason(standings);
+  if (skipReason) {
+    return { predictions: null, status: 'skipped', reason: skipReason };
   }
 
   const ratedUsers = await loadRatedUsers();
 
   const predictions = predictFromCodeforces(standings, ratedUsers);
-  return predictions;
+  return { predictions, status: 'ok' };
 }
 
 async function loadRatedUsers() {
@@ -169,6 +197,10 @@ function durationMs(startedAt: number): number {
 
 function ms(duration: number): number {
   return Math.round(duration);
+}
+
+function errorReason(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 void main();

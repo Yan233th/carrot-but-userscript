@@ -41,19 +41,23 @@ export function calculatePerformanceFromRatingChanges(ratingChanges: RatingChang
 }
 
 export function isPredictionEligible(standings: ContestStandings, nowMs = Date.now()): boolean {
+  return getPredictionSkipReason(standings, nowMs) === null;
+}
+
+export function getPredictionSkipReason(standings: ContestStandings, nowMs = Date.now()): string | null {
   if (isUnratedByName(standings.contest.name)) {
-    return false;
+    return 'contest-name-unrated';
   }
   if (standings.rows.some((row) => row.party.teamId !== undefined || row.party.teamName !== undefined)) {
-    return false;
+    return 'team-contest';
   }
   if (!standings.rows.some((row) => row.party.participantType === 'CONTESTANT')) {
-    return false;
+    return 'no-contestants';
   }
   if (isOldFinishedContest(standings, nowMs)) {
-    return false;
+    return 'old-finished-without-rating-changes';
   }
-  return true;
+  return null;
 }
 
 function getPredictionEntries(
