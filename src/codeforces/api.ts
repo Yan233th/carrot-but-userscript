@@ -132,11 +132,19 @@ export async function fetchApi<T>(method: string, query: Record<string, string |
     credentials: 'include',
     cache: 'no-store',
   });
-  const payload = (await response.json()) as ApiResponse<T>;
+  const payload = await parseApiResponse<T>(response, method);
 
   if (!response.ok || payload.status !== 'OK' || payload.result === undefined) {
     throw new Error(payload.comment ?? `Codeforces API request failed: ${method}`);
   }
 
   return payload.result;
+}
+
+async function parseApiResponse<T>(response: Response, method: string): Promise<ApiResponse<T>> {
+  try {
+    return await response.json() as ApiResponse<T>;
+  } catch (error) {
+    throw new Error(`Invalid JSON from Codeforces API: ${method}`, { cause: error });
+  }
 }

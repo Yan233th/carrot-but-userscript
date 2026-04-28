@@ -26,6 +26,7 @@ describe('shouldRebuildContestStandings', () => {
   test('matches transient Codeforces access failures', () => {
     expect(shouldRebuildContestStandings(new Error('You have to be authenticated to use this method'))).toBe(true);
     expect(shouldRebuildContestStandings(new Error('Cloudflare human check returned invalid json'))).toBe(true);
+    expect(shouldRebuildContestStandings(new Error('Invalid JSON from Codeforces API: contest.standings'))).toBe(true);
   });
 
   test('does not match unrelated API failures', () => {
