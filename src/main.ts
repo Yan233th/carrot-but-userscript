@@ -10,7 +10,7 @@ import {
   type ContestStandingsResult,
 } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
-import { calculatePerformanceFromRatingChanges, getPredictionSkipReason, predictFromCodeforces } from './rating/codeforces';
+import { calculateFinalPerformanceFromCodeforces, getPredictionSkipReason, predictFromCodeforces } from './rating/codeforces';
 import type { Prediction } from './rating/predict';
 import {
   addFinalRatingColumns,
@@ -97,7 +97,18 @@ async function main(): Promise<void> {
         });
         cachePanel.set('rating', ratingChangesResult.cache);
       } else {
-        const finalResults = await buildFinalResults(ratingChanges);
+        const finalStandingsResult = await fetchContestStandings(page.contestId, page.gym, {
+          get: getCachedContestStandings,
+          set: setCachedContestStandings,
+        }, contest).catch((error: unknown) => {
+          console.error(`${LOG_PREFIX} Final standings unavailable:`, error);
+          return null;
+        });
+        if (finalStandingsResult) {
+          logStandingsResult('standings', startedAt, finalStandingsResult);
+          cachePanel.set('standings', cacheState(finalStandingsResult));
+        }
+        const finalResults = await buildFinalResults(ratingChanges, finalStandingsResult?.standings ?? null);
         ratingStatus = 'published';
         clearCarrotColumns(standings);
         const stats = addFinalRatingColumns(standings, finalResults);
@@ -105,6 +116,7 @@ async function main(): Promise<void> {
           cache: ratingChangesResult.cache,
           source: ratingChangesResult.source,
           changes: ratingChanges.length,
+          performance: countFinalPerformance(finalResults),
           rendered: renderRatio(stats),
           stepMs: ms(ratingChangesResult.durationMs),
         });
@@ -210,6 +222,7 @@ function logStandingsResult(stage: string, startedAt: number, result: ContestSta
 
 async function buildFinalResults(
   ratingChanges: Awaited<ReturnType<typeof fetchRatingChanges>>,
+  standings: ContestStandings | null,
 ): Promise<Map<string, FinalRatingResult>> {
   const results = new Map<string, FinalRatingResult>(
     ratingChanges.map((change) => [
@@ -222,10 +235,12 @@ async function buildFinalResults(
     ]),
   );
 
-  for (const prediction of calculatePerformanceFromRatingChanges(ratingChanges)) {
-    const result = results.get(prediction.handle);
-    if (result) {
-      result.performance = prediction.performance;
+  if (standings) {
+    for (const prediction of calculateFinalPerformanceFromCodeforces(standings, ratingChanges)) {
+      const result = results.get(prediction.handle);
+      if (result) {
+        result.performance = prediction.performance;
+      }
     }
   }
   return results;
@@ -312,6 +327,16 @@ function standingsMode(result: ContestStandingsResult): string {
 
 function renderRatio(stats: ColumnRenderStats): string {
   return `${stats.matchedRows}/${stats.dataRows}`;
+}
+
+function countFinalPerformance(results: Map<string, FinalRatingResult>): number {
+  let count = 0;
+  for (const result of results.values()) {
+    if (typeof result.performance === 'number') {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function durationMs(startedAt: number): number {

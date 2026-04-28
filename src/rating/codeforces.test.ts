@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ContestStandings, RatedUser } from '../codeforces/api';
-import { isPredictionEligible, predictFromCodeforces } from './codeforces';
+import type { ContestStandings, RatedUser, RatingChange } from '../codeforces/api';
+import { calculateFinalPerformanceFromCodeforces, isPredictionEligible, predictFromCodeforces } from './codeforces';
 
 describe('predictFromCodeforces', () => {
   test('filters high-rated users from educational rounds', () => {
@@ -33,6 +33,53 @@ describe('predictFromCodeforces', () => {
     const result = predictFromCodeforces(standings, ratedUsers);
 
     expect(result.map((prediction) => prediction.handle).sort()).toEqual(['high', 'low', 'unrated']);
+  });
+});
+
+describe('calculateFinalPerformanceFromCodeforces', () => {
+  test('uses standings order for final performance instead of rating change rank', () => {
+    const standings = makeStandings('Codeforces Round 1', [
+      ['alice', 2, 10],
+      ['bob', 1, 20],
+    ]);
+    const changes = makeRatingChanges([
+      ['alice', 2, 1500, 1490],
+      ['bob', 1, 1500, 1510],
+    ]);
+
+    const result = calculateFinalPerformanceFromCodeforces(standings, changes);
+
+    expect(result.find((prediction) => prediction.handle === 'alice')?.performance).toBe(Infinity);
+  });
+
+  test('treats zero old rating as default rating for contests with fake ratings', () => {
+    const standings = makeStandings('Codeforces Round 1360', [
+      ['newbie', 2, 10],
+      ['veteran', 1, 20],
+    ], { id: 1360 });
+    const changes = makeRatingChanges([
+      ['newbie', 1, 0, 1440],
+      ['veteran', 2, 1500, 1490],
+    ]);
+
+    const result = calculateFinalPerformanceFromCodeforces(standings, changes);
+
+    expect(result.find((prediction) => prediction.handle === 'newbie')?.rating).toBe(1400);
+  });
+
+  test('keeps zero old rating for contests before fake ratings', () => {
+    const standings = makeStandings('Codeforces Round 1359', [
+      ['newbie', 2, 10],
+      ['veteran', 1, 20],
+    ], { id: 1359 });
+    const changes = makeRatingChanges([
+      ['newbie', 1, 0, 1440],
+      ['veteran', 2, 1500, 1490],
+    ]);
+
+    const result = calculateFinalPerformanceFromCodeforces(standings, changes);
+
+    expect(result.find((prediction) => prediction.handle === 'newbie')?.rating).toBe(0);
   });
 });
 
@@ -80,6 +127,7 @@ function makeStandings(
   contestName: string,
   rows: Array<[handle: string, points: number, penalty: number]>,
   options: {
+    id?: number;
     participantType?: string;
     phase?: string;
     startTimeSeconds?: number;
@@ -88,7 +136,7 @@ function makeStandings(
 ): ContestStandings {
   return {
     contest: {
-      id: 1,
+      id: options.id ?? 1,
       name: contestName,
       type: 'CF',
       phase: options.phase ?? 'BEFORE',
@@ -109,4 +157,17 @@ function makeStandings(
       penalty,
     })),
   };
+}
+
+function makeRatingChanges(
+  changes: Array<[handle: string, rank: number, oldRating: number, newRating: number]>,
+): RatingChange[] {
+  return changes.map(([handle, rank, oldRating, newRating]) => ({
+    contestId: 1,
+    handle,
+    rank,
+    ratingUpdateTimeSeconds: 1,
+    oldRating,
+    newRating,
+  }));
 }
