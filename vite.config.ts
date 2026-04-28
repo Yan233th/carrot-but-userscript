@@ -9,7 +9,7 @@ export default defineConfig({
       entry: 'src/main.ts',
       userscript: {
         name: 'Carrot, But Userscript',
-        namespace: 'https://github.com/Yan233_/carrot-but-userscript',
+        namespace: 'https://github.com/Yan233th/carrot-but-userscript',
         description: 'A Tampermonkey userscript for Codeforces rating prediction.',
         license: 'AGPL-3.0-or-later',
         match: [
