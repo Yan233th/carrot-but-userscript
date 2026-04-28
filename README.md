@@ -1,13 +1,11 @@
 # Carrot, But Userscript
 
-Carrot, But Userscript adds rating columns to Codeforces standings pages through
-Tampermonkey.
+Carrot, But Userscript adds compact rating insight columns to Codeforces
+standings pages through Tampermonkey.
 
-It is **fast**, **responsive**, **lightweight**, and **minimal**: no extension
-package, no extra panels, no settings menu, and no page takeover.
-
-It is inspired by [meooow25/carrot](https://github.com/meooow25/carrot), but
-runs as a userscript instead of a browser extension.
+Built for a **fast**, **responsive**, **lightweight**, and **stable** experience:
+no browser extension package, no extra panels, no settings menu, and no page
+takeover.
 
 ## Install
 
@@ -45,6 +43,32 @@ The headers show the current data state:
 The script is designed to stay out of the way and respond quickly. It only
 touches the standings table, shows a loading state immediately, and then replaces
 it with final or predicted rating data when the data is ready.
+
+## Data And Limits
+
+The script uses Codeforces data available to the current page and public API. It
+does not bypass Codeforces permissions, hidden frozen-standings data, private gym
+access, or your account-specific friends list.
+
+For finished contests, official `contest.ratingChanges` data is preferred. If
+the final standings are visible but rating changes have not been published yet,
+the script keeps showing predictions instead of pretending final data exists.
+
+When `contest.standings` is unavailable because of current Codeforces API access
+rules or temporary HTML/Cloudflare responses, the script can rebuild standings
+from `contest.status` as a fallback. This keeps active and just-finished rounds
+usable, but final official rating changes still come from Codeforces.
+
+## Acknowledgements
+
+Thanks to [meooow25/carrot](https://github.com/meooow25/carrot), the original
+browser extension for showing Codeforces rating deltas, rank-up deltas, rank
+changes, and performance ratings on standings pages.
+
+Thanks also to
+[wuyuqian114514/carrot-plus](https://github.com/wuyuqian114514/carrot-plus) for
+documenting and handling practical Codeforces behavior changes, including
+fallback data paths when `contest.standings` is unavailable.
 
 ## Supported Pages
 
