@@ -115,16 +115,7 @@ async function main(): Promise<void> {
     reason: predictionResult.reason,
     rating: ratingStatus,
     predictions: predictionResult.predictions?.length ?? 0,
-    cache: contestStandingsResult ? cacheState(contestStandingsResult) : 'unavailable',
-    standings: contestStandingsResult ? standingsMode(contestStandingsResult) : 'unavailable',
-    source: contestStandingsResult ? standingsSource(contestStandingsResult) : 'unavailable',
-    rows: contestStandingsResult?.standings.rows.length ?? 0,
-    statusPages: contestStandingsResult?.statusPages,
-    submissions: contestStandingsResult?.submissions,
-    officialSubmissions: contestStandingsResult?.officialSubmissions,
-    hacks: contestStandingsResult?.hacks,
     rendered: renderRatio(stats),
-    stepMs: contestStandingsResult ? ms(contestStandingsResult.durationMs) : undefined,
   });
 }
 
