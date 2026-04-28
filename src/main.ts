@@ -112,6 +112,7 @@ async function main(): Promise<void> {
     reason: predictionResult.reason,
     rating: ratingStatus,
     predictions: predictionResult.predictions?.length ?? 0,
+    cache: contestStandingsResult ? cacheState(contestStandingsResult) : 'unavailable',
     standings: contestStandingsResult ? standingsMode(contestStandingsResult) : 'unavailable',
     source: contestStandingsResult ? standingsSource(contestStandingsResult) : 'unavailable',
     rows: contestStandingsResult?.standings.rows.length ?? 0,
@@ -188,6 +189,10 @@ function standingsSource(result: ContestStandingsResult): string {
     return 'contest.standings';
   }
   return result.source === 'status-rebuild-cache' ? 'contest.status-cache' : 'contest.status';
+}
+
+function cacheState(result: ContestStandingsResult): string {
+  return result.source === 'status-rebuild-cache' ? 'hit' : 'miss';
 }
 
 function standingsMode(result: ContestStandingsResult): string {
