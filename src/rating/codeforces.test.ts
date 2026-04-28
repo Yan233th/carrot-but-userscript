@@ -67,6 +67,21 @@ describe('calculateFinalPerformanceFromCodeforces', () => {
     expect(result.find((prediction) => prediction.handle === 'newbie')?.rating).toBe(1400);
   });
 
+  test('keeps rated participants missing from rebuilt final standings as zero-score rows', () => {
+    const standings = makeStandings('Codeforces Round 1360', [
+      ['active', 1, 10],
+    ], { id: 1360 });
+    const changes = makeRatingChanges([
+      ['active', 1, 1500, 1510],
+      ['silent', 2, 1500, 1490],
+    ]);
+
+    const result = calculateFinalPerformanceFromCodeforces(standings, changes);
+
+    expect(result.map((prediction) => prediction.handle).sort()).toEqual(['active', 'silent']);
+    expect(result.find((prediction) => prediction.handle === 'silent')?.delta).toBeLessThan(0);
+  });
+
   test('keeps zero old rating for contests before fake ratings', () => {
     const standings = makeStandings('Codeforces Round 1359', [
       ['newbie', 2, 10],

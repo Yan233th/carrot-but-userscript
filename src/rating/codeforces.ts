@@ -99,12 +99,14 @@ function getFinalPredictionEntries(
   standings: ContestStandings,
   ratings: Map<string, number>,
 ): PredictionInput[] {
-  return standings.rows
+  const seenHandles = new Set<string>();
+  const entries = standings.rows
     .map((row) => {
       const handle = row.party.members[0]?.handle;
       if (!handle || !ratings.has(handle)) {
         return null;
       }
+      seenHandles.add(handle);
 
       return {
         handle,
@@ -114,6 +116,14 @@ function getFinalPredictionEntries(
       };
     })
     .filter((entry) => entry !== null);
+
+  for (const [handle, rating] of ratings) {
+    if (!seenHandles.has(handle)) {
+      entries.push({ handle, points: 0, penalty: 0, rating });
+    }
+  }
+
+  return entries;
 }
 
 function getAdjustedOldRatings(contestId: number, ratingChanges: RatingChange[]): Map<string, number> {
