@@ -1,13 +1,14 @@
 import { fetchContestStandings, fetchRatedUsers, fetchRatingChanges } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
-import { predictFromCodeforces } from './rating/codeforces';
+import { calculatePerformanceFromCodeforces, predictFromCodeforces } from './rating/codeforces';
 import {
-  addFinalDeltaColumn,
+  addFinalRatingColumns,
   addLoadingColumn,
-  addPredictedDeltaColumn,
+  addPredictedRatingColumns,
   type ColumnRenderStats,
   clearCarrotColumns,
   findStandingsTable,
+  type FinalRatingResult,
 } from './standings/table';
 import { installStandingsStyles } from './standings/style';
 import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
@@ -29,12 +30,10 @@ async function main(): Promise<void> {
   installStandingsStyles(document);
   clearCarrotColumns(standings);
   addLoadingColumn(standings);
-  let finalDeltas: Map<string, number> | null = null;
+  let finalResults: Map<string, FinalRatingResult> | null = null;
   try {
     const ratingChanges = await fetchRatingChanges(page.contestId);
-    finalDeltas = new Map(
-      ratingChanges.map((change) => [change.handle, change.newRating - change.oldRating]),
-    );
+    finalResults = await buildFinalResults(page.contestId, ratingChanges);
   } catch (error) {
     console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
     const predictions = await predictContest(page.contestId).catch((predictionError: unknown) => {
@@ -42,14 +41,43 @@ async function main(): Promise<void> {
       return null;
     });
     clearCarrotColumns(standings);
-    logRenderStats('predicted', addPredictedDeltaColumn(standings, predictions));
+    logRenderStats('predicted', addPredictedRatingColumns(standings, predictions));
     console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
     return;
   }
 
   clearCarrotColumns(standings);
-  logRenderStats('final', addFinalDeltaColumn(standings, finalDeltas));
+  logRenderStats('final', addFinalRatingColumns(standings, finalResults));
   console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
+}
+
+async function buildFinalResults(
+  contestId: string,
+  ratingChanges: Awaited<ReturnType<typeof fetchRatingChanges>>,
+): Promise<Map<string, FinalRatingResult>> {
+  const results = new Map<string, FinalRatingResult>(
+    ratingChanges.map((change) => [
+      change.handle,
+      { delta: change.newRating - change.oldRating },
+    ]),
+  );
+
+  const oldRatings = new Map(ratingChanges.map((change) => [change.handle, change.oldRating]));
+  const standings = await fetchContestStandings(contestId).catch((error: unknown) => {
+    console.info(`${LOG_PREFIX} Final performance unavailable:`, error);
+    return null;
+  });
+  if (!standings) {
+    return results;
+  }
+
+  for (const prediction of calculatePerformanceFromCodeforces(standings, oldRatings)) {
+    const result = results.get(prediction.handle);
+    if (result) {
+      result.performance = prediction.performance;
+    }
+  }
+  return results;
 }
 
 async function predictContest(contestId: string) {
@@ -82,7 +110,7 @@ async function loadRatedUsers() {
 }
 
 function logRenderStats(mode: 'final' | 'predicted', stats: ColumnRenderStats): void {
-  console.info(`${LOG_PREFIX} Rendered ${mode} delta column:`, {
+  console.info(`${LOG_PREFIX} Rendered ${mode} rating columns:`, {
     matchedRows: stats.matchedRows,
     dataRows: stats.dataRows,
   });

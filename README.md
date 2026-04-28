@@ -1,9 +1,8 @@
 # Carrot, But Userscript
 
-Carrot, But Userscript adds a responsive rating change column to Codeforces
-standings pages through Tampermonkey. It is intentionally lightweight and
-minimal: no extension package, no extra panels, no settings menu, and no page
-takeover.
+Carrot, But Userscript adds responsive rating columns to Codeforces standings
+pages through Tampermonkey. It is intentionally lightweight and minimal: no
+extension package, no extra panels, no settings menu, and no page takeover.
 
 It is inspired by [meooow25/carrot](https://github.com/meooow25/carrot), but
 runs as a userscript instead of a browser extension.
@@ -20,20 +19,23 @@ https://github.com/Yan233th/carrot-but-userscript/releases/latest/download/carro
 ```
 
 Tampermonkey should open its install page automatically. After installation,
-open a supported Codeforces standings page and the script will add a `Δ` column.
+open a supported Codeforces standings page and the script will add `Π` and `Δ`
+columns.
 
 ## What You See
 
-The added `Δ` column shows rating changes beside each participant.
+The added columns show performance and rating changes beside each participant.
 
-- Gray underlined `Δ`: data is still loading.
-- Green `Δ`: final rating changes published by Codeforces.
-- Amber `Δ`: predicted rating changes before final results are available.
-- `N/A`: the script could not calculate or find a rating change for that row.
+- `Π`: performance rating, meaning the rating level this contest performance resembles.
+- `Δ`: rating change, meaning how much rating is gained or lost.
+- Gray underlined headers: data is still loading.
+- Green headers: final rating data published by Codeforces.
+- Amber headers: predicted rating data before final results are available.
+- `N/A`: the script could not calculate or find data for that row.
 
 The script is designed to stay out of the way and respond quickly. It only
 touches the standings table, shows a loading state immediately, and then replaces
-it with final or predicted rating changes when the data is ready.
+it with final or predicted rating data when the data is ready.
 
 ## Supported Pages
 

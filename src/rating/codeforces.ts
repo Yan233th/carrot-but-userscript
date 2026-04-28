@@ -1,5 +1,5 @@
 import type { ContestStandings, RatedUser } from '../codeforces/api';
-import { type Prediction, predictDeltas } from './predict';
+import { type Prediction, type PredictionInput, predictDeltas } from './predict';
 
 export function predictFromCodeforces(
   standings: ContestStandings,
@@ -25,4 +25,34 @@ export function predictFromCodeforces(
     .filter((entry) => entry !== null);
 
   return predictDeltas(entries);
+}
+
+export function calculatePerformanceFromCodeforces(
+  standings: ContestStandings,
+  ratings: Map<string, number>,
+): Prediction[] {
+  return predictDeltas(getPredictionEntries(standings, ratings));
+}
+
+function getPredictionEntries(
+  standings: ContestStandings,
+  ratings: Map<string, number>,
+): PredictionInput[] {
+  return standings.rows
+    .filter((row) => row.party.participantType === 'CONTESTANT')
+    .filter((row) => row.party.teamId === undefined && row.party.teamName === undefined)
+    .map((row) => {
+      const handle = row.party.members[0]?.handle;
+      if (!handle || !ratings.has(handle)) {
+        return null;
+      }
+
+      return {
+        handle,
+        points: row.points,
+        penalty: row.penalty,
+        rating: ratings.get(handle)!,
+      };
+    })
+    .filter((entry) => entry !== null);
 }
