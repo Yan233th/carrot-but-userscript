@@ -19,15 +19,17 @@ https://github.com/Yan233th/carrot-but-userscript/releases/latest/download/carro
 ```
 
 Tampermonkey should open its install page automatically. After installation,
-open a supported Codeforces standings page and the script will add `Π` and `Δ`
+open a supported Codeforces standings page and the script will add compact rating
 columns.
 
 ## What You See
 
-The added columns show performance and rating changes beside each participant.
+The added columns show performance, rating changes, and rank movement beside each
+participant.
 
 - `Π`: performance rating, meaning the rating level this contest performance resembles.
 - `Δ`: rating change, meaning how much rating is gained or lost.
+- `Rank`: rank helper. For predictions, it shows the delta required to reach the next rank. For final results, it shows rank change or `—` for no change.
 - Gray underlined headers: data is still loading.
 - Green headers: final rating data published by Codeforces.
 - Amber headers: predicted rating data before final results are available.

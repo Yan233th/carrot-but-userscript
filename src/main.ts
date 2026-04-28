@@ -57,7 +57,11 @@ async function buildFinalResults(
   const results = new Map<string, FinalRatingResult>(
     ratingChanges.map((change) => [
       change.handle,
-      { delta: change.newRating - change.oldRating },
+      {
+        delta: change.newRating - change.oldRating,
+        oldRating: change.oldRating,
+        newRating: change.newRating,
+      },
     ]),
   );
 

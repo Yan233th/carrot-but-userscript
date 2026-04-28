@@ -7,6 +7,11 @@ export function installStandingsStyles(document: Document): void {
   text-align: center;
 }
 
+.carrot-but-userscript-rank-cell {
+  width: 6.5em;
+  min-width: 6.5em;
+}
+
 .carrot-but-userscript-header {
   font-weight: bold;
 }
@@ -44,6 +49,21 @@ export function installStandingsStyles(document: Document): void {
 
 .carrot-but-userscript-performance {
   font-weight: bold;
+}
+
+.carrot-but-userscript-rank-helper {
+  font-weight: bold;
+}
+
+.carrot-but-userscript-rank-abbr {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.carrot-but-userscript-rank-arrow {
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+  vertical-align: middle;
 }
 `;
   document.head.append(style);
