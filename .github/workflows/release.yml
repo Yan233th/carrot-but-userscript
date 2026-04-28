@@ -27,6 +27,9 @@ jobs:
       - name: Test
         run: bun test
 
+      - name: Derive userscript version
+        run: echo "USERSCRIPT_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
       - name: Build
         run: bun run build
 

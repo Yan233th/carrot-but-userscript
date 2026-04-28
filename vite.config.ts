@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
 
 const releaseBaseUrl = 'https://github.com/Yan233th/carrot-but-userscript/releases/latest/download';
+const userscriptVersion = process.env.USERSCRIPT_VERSION;
 
 export default defineConfig({
   plugins: [
@@ -10,6 +11,7 @@ export default defineConfig({
       userscript: {
         name: 'Carrot, But Userscript',
         namespace: 'https://github.com/Yan233th/carrot-but-userscript',
+        version: userscriptVersion,
         description: 'A Tampermonkey userscript for Codeforces rating prediction.',
         license: 'AGPL-3.0-or-later',
         match: [
