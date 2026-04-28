@@ -12,8 +12,11 @@ export default defineConfig({
         name: 'Carrot, But Userscript',
         namespace: 'https://github.com/Yan233th/carrot-but-userscript',
         version: userscriptVersion,
+        author: 'Yan233_',
         description: 'A Tampermonkey userscript for Codeforces rating prediction.',
         license: 'AGPL-3.0-or-later',
+        homepageURL: 'https://github.com/Yan233th/carrot-but-userscript',
+        supportURL: 'https://github.com/Yan233th/carrot-but-userscript/issues',
         match: [
           'https://codeforces.com/contest/*/standings*',
           'https://codeforces.com/gym/*/standings*',
