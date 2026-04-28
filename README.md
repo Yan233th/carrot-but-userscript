@@ -1,13 +1,18 @@
 # Carrot, But Userscript
 
-Carrot, But Userscript adds responsive rating columns to Codeforces standings
-pages through Tampermonkey. It is intentionally lightweight and minimal: no
-extension package, no extra panels, no settings menu, and no page takeover.
+Carrot, But Userscript adds rating columns to Codeforces standings pages through
+Tampermonkey.
+
+It is **fast**, **responsive**, **lightweight**, and **minimal**: no extension
+package, no extra panels, no settings menu, and no page takeover.
 
 It is inspired by [meooow25/carrot](https://github.com/meooow25/carrot), but
 runs as a userscript instead of a browser extension.
 
 ## Install
+
+Install [Tampermonkey](https://www.tampermonkey.net/) first, then install the
+userscript:
 
 [![Install Userscript](https://img.shields.io/badge/Install-Userscript-2f8f46)](https://github.com/Yan233th/carrot-but-userscript/releases/latest/download/carrot-but-userscript.user.js)
 
@@ -24,16 +29,18 @@ columns.
 
 ## What You See
 
-The added columns show performance, rating changes, and rank movement beside each
-participant.
+The script adds three compact columns to the standings table:
 
-- `Π`: performance rating, meaning the rating level this contest performance resembles.
-- `Δ`: rating change, meaning how much rating is gained or lost.
-- `Rank`: rank helper. For predictions, it shows the delta required to reach the next rank. For final results, it shows rank change or `—` for no change.
-- Gray underlined headers: data is still loading.
-- Green headers: final rating data published by Codeforces.
-- Amber headers: predicted rating data before final results are available.
-- `N/A`: the script could not calculate or find data for that row.
+- `Π`: performance rating, showing the rating level your contest performance resembles.
+- `Δ`: rating change, showing how much rating is gained or lost.
+- `Rank`: rank movement. During prediction, it shows the delta needed for the next rank. After official rating changes are published, it shows actual rank changes or `—` for no change.
+
+The headers show the current data state:
+
+- Gray underlined headers mean data is loading.
+- Green headers mean official Codeforces rating changes are being shown.
+- Amber headers mean predictions are being shown before official changes are available.
+- `N/A` means the script could not calculate or find data for that row.
 
 The script is designed to stay out of the way and respond quickly. It only
 touches the standings table, shows a loading state immediately, and then replaces
