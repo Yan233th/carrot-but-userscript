@@ -110,6 +110,10 @@ function addRatingColumns(
       deltaCell.textContent = '\u0394';
     } else {
       deltaCell.classList.add('right');
+      if (index % 2) {
+        performanceCell.classList.add('dark');
+        deltaCell.classList.add('dark');
+      }
       const isFooterRow = index === standings.rows.length - 1;
       if (!isFooterRow) {
         dataRows += 1;
