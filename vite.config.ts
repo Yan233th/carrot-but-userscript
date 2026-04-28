@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
 
+const releaseBaseUrl = 'https://github.com/Yan233th/carrot-but-userscript/releases/latest/download';
+
 export default defineConfig({
   plugins: [
     monkey({
@@ -15,6 +17,11 @@ export default defineConfig({
           'https://codeforces.com/gym/*/standings*',
         ],
         grant: ['GM_getValue', 'GM_setValue'],
+        updateURL: `${releaseBaseUrl}/carrot-but-userscript.meta.js`,
+        downloadURL: `${releaseBaseUrl}/carrot-but-userscript.user.js`,
+      },
+      build: {
+        metaFileName: true,
       },
     }),
   ],
