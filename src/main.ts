@@ -1,4 +1,4 @@
-import { fetchContestStandings, fetchRatedUsers, fetchRatingChanges } from './codeforces/api';
+import { fetchContestStandings, fetchRatedUsers, fetchRatingChanges, type ContestStandings } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
 import { calculatePerformanceFromRatingChanges, isPredictionEligible, predictFromCodeforces } from './rating/codeforces';
 import {
@@ -30,24 +30,33 @@ async function main(): Promise<void> {
   installStandingsStyles(document);
   clearCarrotColumns(standings);
   addLoadingColumn(standings);
-  let finalResults: Map<string, FinalRatingResult> | null = null;
-  try {
-    const ratingChanges = await fetchRatingChanges(page.contestId);
-    finalResults = await buildFinalResults(ratingChanges);
-  } catch (error) {
-    console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
-    const predictions = await predictContest(page.contestId).catch((predictionError: unknown) => {
-      console.error(`${LOG_PREFIX} Prediction failed:`, predictionError);
-      return null;
-    });
-    clearCarrotColumns(standings);
-    logRenderStats('predicted', addPredictedRatingColumns(standings, predictions));
-    console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
-    return;
+
+  const contestStandings = await fetchContestStandings(page.contestId).catch((error: unknown) => {
+    console.error(`${LOG_PREFIX} Standings unavailable:`, error);
+    return null;
+  });
+
+  if (contestStandings?.contest.phase === 'FINISHED') {
+    try {
+      const ratingChanges = await fetchRatingChanges(page.contestId);
+      const finalResults = await buildFinalResults(ratingChanges);
+      clearCarrotColumns(standings);
+      logRenderStats('final', addFinalRatingColumns(standings, finalResults));
+      console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
+      return;
+    } catch (error) {
+      console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
+    }
   }
 
+  const predictions = contestStandings
+    ? await predictContest(contestStandings).catch((predictionError: unknown) => {
+      console.error(`${LOG_PREFIX} Prediction failed:`, predictionError);
+      return null;
+    })
+    : null;
   clearCarrotColumns(standings);
-  logRenderStats('final', addFinalRatingColumns(standings, finalResults));
+  logRenderStats('predicted', addPredictedRatingColumns(standings, predictions));
   console.info(`${LOG_PREFIX} Ready on standings page:`, page.contestId);
 }
 
@@ -74,17 +83,12 @@ async function buildFinalResults(
   return results;
 }
 
-async function predictContest(contestId: string) {
-  const ratedUsersPromise = loadRatedUsers();
-  const standings = await fetchContestStandings(contestId);
+async function predictContest(standings: ContestStandings) {
   if (!isPredictionEligible(standings)) {
-    ratedUsersPromise.catch((error: unknown) => {
-      console.info(`${LOG_PREFIX} Ignored rated users load after skipping prediction:`, error);
-    });
     return null;
   }
 
-  const ratedUsers = await ratedUsersPromise;
+  const ratedUsers = await loadRatedUsers();
 
   const predictions = predictFromCodeforces(standings, ratedUsers);
   console.info(`${LOG_PREFIX} Prediction complete:`, {
