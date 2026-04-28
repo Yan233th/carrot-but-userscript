@@ -1,4 +1,4 @@
-import { fetchContestStandings, fetchRatedUsers, fetchRatingChanges, type ContestStandings } from './codeforces/api';
+import { fetchContest, fetchContestStandings, fetchRatedUsers, fetchRatingChanges, type ContestStandings } from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
 import { calculatePerformanceFromRatingChanges, isPredictionEligible, predictFromCodeforces } from './rating/codeforces';
 import {
@@ -31,12 +31,12 @@ async function main(): Promise<void> {
   clearCarrotColumns(standings);
   addLoadingColumn(standings);
 
-  const contestStandings = await fetchContestStandings(page.contestId).catch((error: unknown) => {
-    console.error(`${LOG_PREFIX} Standings unavailable:`, error);
+  const contest = await fetchContest(page.contestId, page.gym).catch((error: unknown) => {
+    console.error(`${LOG_PREFIX} Contest unavailable:`, error);
     return null;
   });
 
-  if (contestStandings?.contest.phase === 'FINISHED') {
+  if (contest?.phase === 'FINISHED') {
     try {
       const ratingChanges = await fetchRatingChanges(page.contestId);
       const finalResults = await buildFinalResults(ratingChanges);
@@ -48,6 +48,13 @@ async function main(): Promise<void> {
       console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
     }
   }
+
+  const contestStandings = contest
+    ? await fetchContestStandings(page.contestId, page.gym).catch((error: unknown) => {
+      console.error(`${LOG_PREFIX} Standings unavailable:`, error);
+      return null;
+    })
+    : null;
 
   const predictions = contestStandings
     ? await predictContest(contestStandings).catch((predictionError: unknown) => {

@@ -1,4 +1,4 @@
-import { type Contest, type ContestProblem, type ContestStandings, fetchApi, type Party, type StandingsRow } from './api';
+import { type Contest, type ContestProblem, type ContestStandings, fetchApi, fetchContest, type Party, type StandingsRow } from './api';
 
 const PAGE_SIZE = 10000;
 
@@ -31,8 +31,8 @@ export function shouldRebuildContestStandings(error: unknown): boolean {
     message.includes('invalid json');
 }
 
-export async function rebuildContestStandings(contestId: string): Promise<ContestStandings> {
-  const contestPromise = fetchContest(contestId);
+export async function rebuildContestStandings(contestId: string, gym: boolean): Promise<ContestStandings> {
+  const contestPromise = fetchContest(contestId, gym);
   const submissionsPromise = fetchContestSubmissions(contestId);
   const contest = await contestPromise;
   const hacksPromise = contest.type === 'CF' ? fetchContestHacks(contestId) : Promise.resolve([]);
@@ -63,15 +63,6 @@ export function buildContestStandingsFromStatus(
     problems: getProblems(submissions),
     rows,
   };
-}
-
-async function fetchContest(contestId: string): Promise<Contest> {
-  const contests = await fetchApi<Contest[]>('contest.list', { gym: 'false' });
-  const contest = contests.find((entry) => String(entry.id) === contestId);
-  if (!contest) {
-    throw new Error(`Contest ${contestId} not found`);
-  }
-  return contest;
 }
 
 async function fetchContestSubmissions(contestId: string): Promise<ContestSubmission[]> {

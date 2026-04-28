@@ -64,11 +64,20 @@ export interface RatedUser {
   rating: number;
 }
 
+export async function fetchContest(contestId: string, gym: boolean): Promise<Contest> {
+  const contests = await fetchApi<Contest[]>('contest.list', { gym: String(gym) });
+  const contest = contests.find((entry) => String(entry.id) === contestId);
+  if (!contest) {
+    throw new Error(`Contest ${contestId} not found`);
+  }
+  return contest;
+}
+
 export async function fetchRatingChanges(contestId: string): Promise<RatingChange[]> {
   return await fetchApi<RatingChange[]>('contest.ratingChanges', { contestId });
 }
 
-export async function fetchContestStandings(contestId: string): Promise<ContestStandings> {
+export async function fetchContestStandings(contestId: string, gym: boolean): Promise<ContestStandings> {
   try {
     return await fetchApi<ContestStandings>('contest.standings', {
       contestId,
@@ -78,7 +87,7 @@ export async function fetchContestStandings(contestId: string): Promise<ContestS
     if (!shouldRebuildContestStandings(error)) {
       throw error;
     }
-    return await rebuildContestStandings(contestId);
+    return await rebuildContestStandings(contestId, gym);
   }
 }
 
