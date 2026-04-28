@@ -83,6 +83,57 @@ tr.highlighted-row .carrot-but-userscript-rank-up-achieved {
   padding-left: 0.5em;
   padding-right: 0.5em;
 }
+
+.carrot-but-userscript-cache-panel {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid #dddddd;
+  border-radius: 4px;
+  bottom: 0.6em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  color: #777;
+  display: inline-flex;
+  font-size: 0.92em;
+  gap: 0.45em;
+  max-width: calc(100vw - 1.2em);
+  overflow-x: auto;
+  padding: 0.35em 0.45em;
+  position: fixed;
+  right: 0.6em;
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.carrot-but-userscript-cache-status {
+  border: 1px solid #d8d8d8;
+  border-radius: 999px;
+  padding: 0.12em 0.55em;
+  white-space: nowrap;
+}
+
+.carrot-but-userscript-cache-hit {
+  border-color: #9dcc9d;
+  color: green;
+}
+
+.carrot-but-userscript-cache-miss {
+  border-color: #d4c090;
+  color: #9b6a00;
+}
+
+.carrot-but-userscript-cache-clear {
+  background: #f7f7f7;
+  border: 1px solid #cfcfcf;
+  border-radius: 3px;
+  color: #555;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.12em 0.55em;
+}
+
+.carrot-but-userscript-cache-clear:hover {
+  background: #eeeeee;
+}
 `;
   document.head.append(style);
 }

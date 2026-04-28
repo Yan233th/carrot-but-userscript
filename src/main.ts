@@ -21,6 +21,7 @@ import {
   findStandingsTable,
   type FinalRatingResult,
 } from './standings/table';
+import { addCacheStatusPanel, type CacheState, type CacheStatusPanel } from './standings/cache-status';
 import { installStandingsStyles } from './standings/style';
 import { getCachedContest, setCachedContest } from './storage/contest-cache';
 import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
@@ -58,6 +59,7 @@ async function main(): Promise<void> {
   installStandingsStyles(document);
   clearCarrotColumns(standings);
   addLoadingColumn(standings);
+  const cachePanel = addCacheStatusPanel(standings.table);
   logProgress('start', startedAt, { contestId: page.contestId, page: page.gym ? 'gym' : 'contest' });
   let ratingStatus: 'published' | 'pending' | 'not-finished' | 'unknown' = 'unknown';
 
@@ -74,6 +76,7 @@ async function main(): Promise<void> {
       source: contestResult.source,
       stepMs: ms(contestResult.durationMs),
     });
+    cachePanel.set('metadata', contestResult.cache);
     if (contest.phase !== 'FINISHED') {
       ratingStatus = 'not-finished';
     }
@@ -92,6 +95,7 @@ async function main(): Promise<void> {
           changes: 0,
           stepMs: ms(ratingChangesResult.durationMs),
         });
+        cachePanel.set('rating', ratingChangesResult.cache);
       } else {
         const finalResults = await buildFinalResults(ratingChanges);
         ratingStatus = 'published';
@@ -104,6 +108,7 @@ async function main(): Promise<void> {
           rendered: renderRatio(stats),
           stepMs: ms(ratingChangesResult.durationMs),
         });
+        cachePanel.set('rating', ratingChangesResult.cache);
         return;
       }
     } catch (error) {
@@ -123,10 +128,11 @@ async function main(): Promise<void> {
     : null;
   if (contestStandingsResult) {
     logStandingsResult('standings', startedAt, contestStandingsResult);
+    cachePanel.set('standings', cacheState(contestStandingsResult));
   }
 
   const predictionResult = contestStandingsResult
-    ? await predictContest(contestStandingsResult.standings, startedAt).catch((predictionError: unknown): PredictionResult => {
+    ? await predictContest(contestStandingsResult.standings, startedAt, cachePanel).catch((predictionError: unknown): PredictionResult => {
       console.error(`${LOG_PREFIX} Prediction failed:`, predictionError);
       return { predictions: null, status: 'failed', reason: errorReason(predictionError) };
     })
@@ -225,7 +231,11 @@ async function buildFinalResults(
   return results;
 }
 
-async function predictContest(standings: ContestStandings, startedAt: number): Promise<PredictionResult> {
+async function predictContest(
+  standings: ContestStandings,
+  startedAt: number,
+  cachePanel: CacheStatusPanel,
+): Promise<PredictionResult> {
   const skipReason = getPredictionSkipReason(standings);
   if (skipReason) {
     return { predictions: null, status: 'skipped', reason: skipReason };
@@ -238,6 +248,7 @@ async function predictContest(standings: ContestStandings, startedAt: number): P
     users: ratedUsersResult.value.length,
     stepMs: ms(ratedUsersResult.durationMs),
   });
+  cachePanel.set('rated-users', ratedUsersResult.cache);
 
   const predictions = predictFromCodeforces(standings, ratedUsersResult.value);
   return { predictions, status: 'ok' };
@@ -288,7 +299,7 @@ function standingsSource(result: ContestStandingsResult): string {
   return result.source === 'status-rebuild-cache' ? 'contest.status-cache' : 'contest.status';
 }
 
-function cacheState(result: ContestStandingsResult): string {
+function cacheState(result: ContestStandingsResult): CacheState {
   return result.source.endsWith('-cache') ? 'hit' : 'miss';
 }
 

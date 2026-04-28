@@ -31,6 +31,10 @@ export async function setCachedValue<T>(key: string, value: T, ttlMs: number): P
   await pruneCache(cache);
 }
 
+export async function clearCachedValues(): Promise<void> {
+  await GM_setValue(CACHE_KEY, {});
+}
+
 async function getCache(): Promise<CacheStore> {
   return await GM_getValue(CACHE_KEY, {}) as CacheStore;
 }
