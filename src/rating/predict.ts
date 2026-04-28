@@ -130,8 +130,7 @@ function assignRanks(contestants: MutableContestant[]): void {
   let rank = 0;
   let previousPoints: number | null = null;
   let previousPenalty: number | null = null;
-  for (let index = contestants.length - 1; index >= 0; index -= 1) {
-    const contestant = contestants[index]!;
+  for (const [index, contestant] of contestants.entries()) {
     if (contestant.points !== previousPoints || contestant.penalty !== previousPenalty) {
       rank = index + 1;
       previousPoints = contestant.points;

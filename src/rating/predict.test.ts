@@ -29,4 +29,19 @@ describe('predictDeltas', () => {
       { handle: 'c', rating: null, delta: -82, performance: -14 },
     ]);
   });
+
+  test('uses first rank for tied standings groups', () => {
+    const fromScores = predictDeltas([
+      { handle: 'a', points: 3, penalty: 10, rating: 1500 },
+      { handle: 'b', points: 3, penalty: 10, rating: 1500 },
+      { handle: 'c', points: 1, penalty: 30, rating: 1500 },
+    ]);
+    const fromRanks = predictDeltasFromRanks([
+      { handle: 'a', rank: 1, rating: 1500 },
+      { handle: 'b', rank: 1, rating: 1500 },
+      { handle: 'c', rank: 3, rating: 1500 },
+    ]);
+
+    expect(fromScores).toEqual(fromRanks);
+  });
 });
