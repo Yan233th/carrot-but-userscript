@@ -1,4 +1,4 @@
-import { rebuildContestStandings, shouldRebuildContestStandings } from './contest-standings-rebuild';
+import { rebuildContestStandings, shouldRebuildContestStandings, type RebuiltContestStandings } from './contest-standings-rebuild';
 
 const API_ROOT = 'https://codeforces.com/api/';
 
@@ -60,13 +60,18 @@ export interface ContestStandings {
 }
 
 export interface ContestStandingsResult {
-  source: 'api' | 'status-rebuild';
+  source: 'api' | 'status-rebuild' | 'status-rebuild-cache';
   standings: ContestStandings;
   durationMs: number;
   statusPages?: number;
   submissions?: number;
   officialSubmissions?: number;
   hacks?: number;
+}
+
+export interface RebuiltStandingsCacheAdapter {
+  get: (contestId: string, gym: boolean) => Promise<RebuiltContestStandings | null>;
+  set: (contestId: string, gym: boolean, result: RebuiltContestStandings) => Promise<void>;
 }
 
 export interface RatedUser {
@@ -87,7 +92,11 @@ export async function fetchRatingChanges(contestId: string): Promise<RatingChang
   return await fetchApi<RatingChange[]>('contest.ratingChanges', { contestId });
 }
 
-export async function fetchContestStandings(contestId: string, gym: boolean): Promise<ContestStandingsResult> {
+export async function fetchContestStandings(
+  contestId: string,
+  gym: boolean,
+  cache?: RebuiltStandingsCacheAdapter,
+): Promise<ContestStandingsResult> {
   const startedAt = performance.now();
   try {
     return {
@@ -102,7 +111,21 @@ export async function fetchContestStandings(contestId: string, gym: boolean): Pr
     if (!shouldRebuildContestStandings(error)) {
       throw error;
     }
+    const cached = await cache?.get(contestId, gym);
+    if (cached) {
+      return {
+        source: 'status-rebuild-cache',
+        standings: cached.standings,
+        durationMs: performance.now() - startedAt,
+        statusPages: cached.statusPages,
+        submissions: cached.submissions,
+        officialSubmissions: cached.officialSubmissions,
+        hacks: cached.hacks,
+      };
+    }
+
     const rebuilt = await rebuildContestStandings(contestId, gym);
+    await cache?.set(contestId, gym, rebuilt);
     return {
       source: 'status-rebuild',
       standings: rebuilt.standings,

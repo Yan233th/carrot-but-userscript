@@ -13,6 +13,7 @@ import {
 } from './standings/table';
 import { installStandingsStyles } from './standings/style';
 import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
+import { getCachedRebuiltStandings, setCachedRebuiltStandings } from './storage/rebuilt-standings-cache';
 
 const LOG_PREFIX = '[Carrot, But Userscript]';
 
@@ -89,7 +90,10 @@ async function main(): Promise<void> {
   }
 
   const contestStandingsResult = contest
-    ? await fetchContestStandings(page.contestId, page.gym).catch((error: unknown) => {
+    ? await fetchContestStandings(page.contestId, page.gym, {
+      get: getCachedRebuiltStandings,
+      set: setCachedRebuiltStandings,
+    }).catch((error: unknown) => {
       console.error(`${LOG_PREFIX} Standings unavailable:`, error);
       return null;
     })
@@ -180,11 +184,17 @@ function withoutUndefined(details: Record<string, string | number | undefined>):
 }
 
 function standingsSource(result: ContestStandingsResult): string {
-  return result.source === 'api' ? 'contest.standings' : 'contest.status';
+  if (result.source === 'api') {
+    return 'contest.standings';
+  }
+  return result.source === 'status-rebuild-cache' ? 'contest.status-cache' : 'contest.status';
 }
 
 function standingsMode(result: ContestStandingsResult): string {
-  return result.source === 'api' ? 'api' : 'fallback';
+  if (result.source === 'api') {
+    return 'api';
+  }
+  return result.source === 'status-rebuild-cache' ? 'fallback-cache' : 'fallback';
 }
 
 function renderRatio(stats: ColumnRenderStats): string {
