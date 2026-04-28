@@ -39,8 +39,12 @@ export function shouldRebuildContestStandings(error: unknown): boolean {
     message.includes('invalid json');
 }
 
-export async function rebuildContestStandings(contestId: string, gym: boolean): Promise<RebuiltContestStandings> {
-  const contestPromise = fetchContest(contestId, gym);
+export async function rebuildContestStandings(
+  contestId: string,
+  gym: boolean,
+  knownContest?: Contest,
+): Promise<RebuiltContestStandings> {
+  const contestPromise = knownContest ? Promise.resolve(knownContest) : fetchContest(contestId, gym);
   const submissionsPromise = fetchContestSubmissions(contestId);
   const contest = await contestPromise;
   const hacksPromise = contest.type === 'CF' ? fetchContestHacks(contestId) : Promise.resolve([]);

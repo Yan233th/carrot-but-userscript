@@ -100,6 +100,7 @@ export async function fetchContestStandings(
   contestId: string,
   gym: boolean,
   cache?: ContestStandingsCacheAdapter,
+  knownContest?: Contest,
 ): Promise<ContestStandingsResult> {
   const startedAt = performance.now();
   const cached = await cache?.get(contestId, gym);
@@ -134,7 +135,7 @@ export async function fetchContestStandings(
       throw error;
     }
 
-    const rebuilt = await rebuildContestStandings(contestId, gym);
+    const rebuilt = await rebuildContestStandings(contestId, gym, knownContest);
     await cache?.set(contestId, gym, {
       source: 'status-rebuild',
       ...rebuilt,

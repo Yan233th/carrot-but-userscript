@@ -1,4 +1,14 @@
-import { fetchContest, fetchContestStandings, fetchRatedUsers, fetchRatingChanges, type ContestStandings, type ContestStandingsResult } from './codeforces/api';
+import {
+  type Contest,
+  fetchContest,
+  fetchContestStandings,
+  fetchRatedUsers,
+  fetchRatingChanges,
+  type RatedUser,
+  type RatingChange,
+  type ContestStandings,
+  type ContestStandingsResult,
+} from './codeforces/api';
 import { getStandingsPage } from './codeforces/page';
 import { calculatePerformanceFromRatingChanges, getPredictionSkipReason, predictFromCodeforces } from './rating/codeforces';
 import type { Prediction } from './rating/predict';
@@ -12,7 +22,9 @@ import {
   type FinalRatingResult,
 } from './standings/table';
 import { installStandingsStyles } from './standings/style';
+import { getCachedContest, setCachedContest } from './storage/contest-cache';
 import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
+import { getCachedRatingChanges, setCachedRatingChanges } from './storage/rating-changes-cache';
 import { getCachedContestStandings, setCachedContestStandings } from './storage/standings-cache';
 
 const LOG_PREFIX = '[Carrot, But Userscript]';
@@ -21,6 +33,13 @@ interface PredictionResult {
   predictions: Prediction[] | null;
   status: 'ok' | 'skipped' | 'failed' | 'unavailable';
   reason?: string;
+}
+
+interface LoadedApiValue<T> {
+  value: T;
+  cache: 'hit' | 'miss';
+  source: string;
+  durationMs: number;
 }
 
 async function main(): Promise<void> {
@@ -42,16 +61,18 @@ async function main(): Promise<void> {
   logProgress('start', startedAt, { contestId: page.contestId, page: page.gym ? 'gym' : 'contest' });
   let ratingStatus: 'published' | 'pending' | 'not-finished' | 'unknown' = 'unknown';
 
-  const metadataStartedAt = performance.now();
-  const contest = await fetchContest(page.contestId, page.gym).catch((error: unknown) => {
+  const contestResult = await loadContest(page.contestId, page.gym).catch((error: unknown) => {
     console.error(`${LOG_PREFIX} Contest unavailable:`, error);
     return null;
   });
-  if (contest) {
+  let contest: Contest | null = null;
+  if (contestResult) {
+    contest = contestResult.value;
     logProgress('metadata', startedAt, {
+      cache: contestResult.cache,
       phase: contest.phase,
-      source: 'contest.list',
-      stepMs: durationMs(metadataStartedAt),
+      source: contestResult.source,
+      stepMs: ms(contestResult.durationMs),
     });
     if (contest.phase !== 'FINISHED') {
       ratingStatus = 'not-finished';
@@ -60,15 +81,16 @@ async function main(): Promise<void> {
 
   if (contest?.phase === 'FINISHED') {
     try {
-      const finalStartedAt = performance.now();
-      const ratingChanges = await fetchRatingChanges(page.contestId);
+      const ratingChangesResult = await loadRatingChanges(page.contestId);
+      const ratingChanges = ratingChangesResult.value;
       if (ratingChanges.length === 0) {
         ratingStatus = 'pending';
         logProgress('rating', startedAt, {
+          cache: ratingChangesResult.cache,
           status: ratingStatus,
-          source: 'contest.ratingChanges',
+          source: ratingChangesResult.source,
           changes: 0,
-          stepMs: durationMs(finalStartedAt),
+          stepMs: ms(ratingChangesResult.durationMs),
         });
       } else {
         const finalResults = await buildFinalResults(ratingChanges);
@@ -76,10 +98,11 @@ async function main(): Promise<void> {
         clearCarrotColumns(standings);
         const stats = addFinalRatingColumns(standings, finalResults);
         logProgress('final', startedAt, {
-          source: 'contest.ratingChanges',
+          cache: ratingChangesResult.cache,
+          source: ratingChangesResult.source,
           changes: ratingChanges.length,
           rendered: renderRatio(stats),
-          stepMs: durationMs(finalStartedAt),
+          stepMs: ms(ratingChangesResult.durationMs),
         });
         return;
       }
@@ -93,7 +116,7 @@ async function main(): Promise<void> {
     ? await fetchContestStandings(page.contestId, page.gym, {
       get: getCachedContestStandings,
       set: setCachedContestStandings,
-    }).catch((error: unknown) => {
+    }, contest).catch((error: unknown) => {
       console.error(`${LOG_PREFIX} Standings unavailable:`, error);
       return null;
     })
@@ -103,7 +126,7 @@ async function main(): Promise<void> {
   }
 
   const predictionResult = contestStandingsResult
-    ? await predictContest(contestStandingsResult.standings).catch((predictionError: unknown): PredictionResult => {
+    ? await predictContest(contestStandingsResult.standings, startedAt).catch((predictionError: unknown): PredictionResult => {
       console.error(`${LOG_PREFIX} Prediction failed:`, predictionError);
       return { predictions: null, status: 'failed', reason: errorReason(predictionError) };
     })
@@ -117,6 +140,50 @@ async function main(): Promise<void> {
     predictions: predictionResult.predictions?.length ?? 0,
     rendered: renderRatio(stats),
   });
+}
+
+async function loadContest(contestId: string, gym: boolean): Promise<LoadedApiValue<Contest>> {
+  const startedAt = performance.now();
+  const cachedContest = await getCachedContest(contestId, gym);
+  if (cachedContest) {
+    return {
+      value: cachedContest,
+      cache: 'hit',
+      source: 'contest.list-cache',
+      durationMs: performance.now() - startedAt,
+    };
+  }
+
+  const contest = await fetchContest(contestId, gym);
+  await setCachedContest(contestId, gym, contest);
+  return {
+    value: contest,
+    cache: 'miss',
+    source: 'contest.list',
+    durationMs: performance.now() - startedAt,
+  };
+}
+
+async function loadRatingChanges(contestId: string): Promise<LoadedApiValue<RatingChange[]>> {
+  const startedAt = performance.now();
+  const cachedChanges = await getCachedRatingChanges(contestId);
+  if (cachedChanges) {
+    return {
+      value: cachedChanges,
+      cache: 'hit',
+      source: 'contest.ratingChanges-cache',
+      durationMs: performance.now() - startedAt,
+    };
+  }
+
+  const changes = await fetchRatingChanges(contestId);
+  await setCachedRatingChanges(contestId, changes);
+  return {
+    value: changes,
+    cache: 'miss',
+    source: 'contest.ratingChanges',
+    durationMs: performance.now() - startedAt,
+  };
 }
 
 function logStandingsResult(stage: string, startedAt: number, result: ContestStandingsResult): void {
@@ -156,27 +223,44 @@ async function buildFinalResults(
   return results;
 }
 
-async function predictContest(standings: ContestStandings): Promise<PredictionResult> {
+async function predictContest(standings: ContestStandings, startedAt: number): Promise<PredictionResult> {
   const skipReason = getPredictionSkipReason(standings);
   if (skipReason) {
     return { predictions: null, status: 'skipped', reason: skipReason };
   }
 
-  const ratedUsers = await loadRatedUsers();
+  const ratedUsersResult = await loadRatedUsers();
+  logProgress('rated-users', startedAt, {
+    cache: ratedUsersResult.cache,
+    source: ratedUsersResult.source,
+    users: ratedUsersResult.value.length,
+    stepMs: ms(ratedUsersResult.durationMs),
+  });
 
-  const predictions = predictFromCodeforces(standings, ratedUsers);
+  const predictions = predictFromCodeforces(standings, ratedUsersResult.value);
   return { predictions, status: 'ok' };
 }
 
-async function loadRatedUsers() {
+async function loadRatedUsers(): Promise<LoadedApiValue<RatedUser[]>> {
+  const startedAt = performance.now();
   const cachedUsers = await getCachedRatedUsers();
   if (cachedUsers) {
-    return cachedUsers;
+    return {
+      value: cachedUsers,
+      cache: 'hit',
+      source: 'user.ratedList-cache',
+      durationMs: performance.now() - startedAt,
+    };
   }
 
   const users = await fetchRatedUsers();
   await setCachedRatedUsers(users);
-  return users;
+  return {
+    value: users,
+    cache: 'miss',
+    source: 'user.ratedList',
+    durationMs: performance.now() - startedAt,
+  };
 }
 
 function logProgress(stage: string, startedAt: number, details: Record<string, string | number | undefined>): void {
