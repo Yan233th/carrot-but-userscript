@@ -155,7 +155,9 @@ async function loadContest(contestId: string, gym: boolean): Promise<LoadedApiVa
   }
 
   const contest = await fetchContest(contestId, gym);
-  await setCachedContest(contestId, gym, contest);
+  if (contest.phase === 'FINISHED') {
+    await setCachedContest(contestId, gym, contest);
+  }
   return {
     value: contest,
     cache: 'miss',

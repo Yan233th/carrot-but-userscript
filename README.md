@@ -53,7 +53,7 @@ The script uses Codeforces data available to the current page and public API. It
 does not bypass Codeforces permissions, hidden frozen-standings data, private gym
 access, or your account-specific friends list.
 
-Prediction results are not cached. API input data is cached with short, scoped
+Prediction results are not cached. Stable API input data is cached with scoped
 TTLs and expired entries are pruned automatically. Standings data may be reused
 for up to 30 seconds during quick reloads. When `contest.standings` is
 unavailable, rebuilt fallback standings from `contest.status` use the same
@@ -102,9 +102,10 @@ The script asks Tampermonkey for storage permission so it can temporarily keep
 Codeforces rated-user data. This avoids fetching the same large list repeatedly
 while you move between standings pages.
 
-The global rated-user list is kept briefly. Contest metadata, official rating
-changes, and standings input data may be cached according to their update
-frequency. Prediction results and rendered table columns are not stored.
+The global rated-user list is kept briefly. Finished contest metadata, published
+official rating changes, and standings input data may be cached according to
+their update frequency. Pending rating changes, prediction results, and rendered
+table columns are not stored.
 
 ## Development
 
