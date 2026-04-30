@@ -38,7 +38,7 @@ interface PredictionResult {
 
 interface LoadedApiValue<T> {
   value: T;
-  cache: 'hit' | 'miss';
+  cache: Extract<CacheState, 'hit' | 'miss' | 'live'>;
   source: string;
   durationMs: number;
 }
@@ -178,7 +178,7 @@ async function loadContest(contestId: string, gym: boolean): Promise<LoadedApiVa
   }
   return {
     value: contest,
-    cache: 'miss',
+    cache: contest.phase === 'FINISHED' ? 'miss' : 'live',
     source: 'contest.list',
     durationMs: performance.now() - startedAt,
   };
@@ -200,7 +200,7 @@ async function loadRatingChanges(contestId: string): Promise<LoadedApiValue<Rati
   await setCachedRatingChanges(contestId, changes);
   return {
     value: changes,
-    cache: 'miss',
+    cache: changes.length === 0 ? 'live' : 'miss',
     source: 'contest.ratingChanges',
     durationMs: performance.now() - startedAt,
   };

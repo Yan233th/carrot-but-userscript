@@ -121,6 +121,11 @@ tr.highlighted-row .carrot-but-userscript-rank-up-achieved {
   color: #9b6a00;
 }
 
+.carrot-but-userscript-cache-live {
+  border-color: #b9c7d8;
+  color: #536f8a;
+}
+
 .carrot-but-userscript-cache-clear {
   background: #f7f7f7;
   border: 1px solid #cfcfcf;

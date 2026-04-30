@@ -4,9 +4,10 @@ const PANEL_CLASS = 'carrot-but-userscript-cache-panel';
 const STATUS_CLASS = 'carrot-but-userscript-cache-status';
 const HIT_CLASS = 'carrot-but-userscript-cache-hit';
 const MISS_CLASS = 'carrot-but-userscript-cache-miss';
+const LIVE_CLASS = 'carrot-but-userscript-cache-live';
 const CLEAR_BUTTON_CLASS = 'carrot-but-userscript-cache-clear';
 
-export type CacheState = 'hit' | 'miss' | 'unused' | 'cleared';
+export type CacheState = 'hit' | 'miss' | 'live' | 'unused' | 'cleared';
 
 export interface CacheStatusPanel {
   set: (name: string, state: CacheState) => void;
@@ -61,11 +62,13 @@ function makeStatus(name: string, state: CacheState): HTMLSpanElement {
 }
 
 function renderStatus(status: HTMLSpanElement, name: string, state: CacheState): void {
-  status.classList.remove(HIT_CLASS, MISS_CLASS);
+  status.classList.remove(HIT_CLASS, MISS_CLASS, LIVE_CLASS);
   status.textContent = `${name}: ${state}`;
   if (state === 'hit') {
     status.classList.add(HIT_CLASS);
   } else if (state === 'miss') {
     status.classList.add(MISS_CLASS);
+  } else if (state === 'live') {
+    status.classList.add(LIVE_CLASS);
   }
 }
