@@ -74,9 +74,18 @@ Current cache behavior:
 - Empty pending rating-change responses, rendered table cells, and prediction
   results are not stored.
 
-A small `Contest cache` panel shows cache hit/miss status for the current page.
-Its `Clear` button clears all current-version cache entries created by this
+A small `Contest cache` panel shows cache status for the current page. Its
+`Clear` button clears all current-version cache entries created by this
 userscript.
+
+Cache panel states:
+
+- `hit`: cached data was reused.
+- `miss`: cacheable data was fetched and stored because no fresh cache existed.
+- `live`: the data is intentionally not cached, such as active contest metadata
+  or empty pending rating-change responses.
+- `unused`: that data source was not needed for the current page state.
+- `cleared`: current-version cache entries were cleared from the panel.
 
 If you upgraded from an early cache build and still see a browser error about a
 message exceeding `64MiB`, clear this userscript's Tampermonkey storage once.
