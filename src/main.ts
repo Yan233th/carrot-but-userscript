@@ -24,6 +24,7 @@ import {
 import { addCacheStatusPanel, type CacheState, type CacheStatusPanel } from './standings/cache-status';
 import { installStandingsStyles } from './standings/style';
 import { getCachedContest, setCachedContest } from './storage/contest-cache';
+import { deleteKnownLegacyOversizedCacheValues } from './storage/cache';
 import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
 import { getCachedRatingChanges, setCachedRatingChanges } from './storage/rating-changes-cache';
 import { getCachedContestStandings, setCachedContestStandings } from './storage/standings-cache';
@@ -45,6 +46,8 @@ interface LoadedApiValue<T> {
 
 async function main(): Promise<void> {
   const startedAt = performance.now();
+  await deleteKnownLegacyOversizedCacheValues();
+
   const page = getStandingsPage(window.location);
   if (!page) {
     return;

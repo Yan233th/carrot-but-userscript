@@ -1,6 +1,9 @@
-import { GM_deleteValue, GM_getValue, GM_listValues, GM_setValue } from 'vite-plugin-monkey/dist/client';
+import { GM } from 'vite-plugin-monkey/dist/client';
 
 const CACHE_KEY_PREFIX = 'cache.v2.';
+const LEGACY_OVERSIZED_KEYS = [
+  'cache.v2.cache.rated-users',
+];
 
 interface CacheEntry<T = unknown> {
   savedAt: number;
@@ -8,18 +11,18 @@ interface CacheEntry<T = unknown> {
   value: T;
 }
 
-export function getCachedValue<T>(key: string): T | null {
-  const entry = GM_getValue<CacheEntry<T> | null>(cacheKey(key), null);
+export async function getCachedValue<T>(key: string): Promise<T | null> {
+  const entry = await GM.getValue<CacheEntry<T> | null>(cacheKey(key), null);
   if (!entry || isExpired(entry)) {
-    GM_deleteValue(cacheKey(key));
+    await GM.deleteValue(cacheKey(key));
     return null;
   }
 
   return entry.value;
 }
 
-export function setCachedValue<T>(key: string, value: T, ttlMs: number): void {
-  GM_setValue(cacheKey(key), {
+export async function setCachedValue<T>(key: string, value: T, ttlMs: number): Promise<void> {
+  await GM.setValue(cacheKey(key), {
     savedAt: Date.now(),
     ttlMs,
     value,
@@ -27,9 +30,15 @@ export function setCachedValue<T>(key: string, value: T, ttlMs: number): void {
 }
 
 export async function clearCachedValues(): Promise<void> {
-  const keys = getStorageKeys();
+  const keys = await getStorageKeys();
   for (const key of keys) {
-    GM_deleteValue(key);
+    await GM.deleteValue(key);
+  }
+}
+
+export async function deleteKnownLegacyOversizedCacheValues(): Promise<void> {
+  for (const key of LEGACY_OVERSIZED_KEYS) {
+    await GM.deleteValue(key);
   }
 }
 
@@ -39,8 +48,8 @@ function isExpired(entry: CacheEntry): boolean {
     Date.now() - entry.savedAt > entry.ttlMs;
 }
 
-function getStorageKeys(): string[] {
-  const keys = GM_listValues();
+async function getStorageKeys(): Promise<string[]> {
+  const keys = await GM.listValues();
   return keys.filter((key) => key.startsWith(CACHE_KEY_PREFIX));
 }
 
