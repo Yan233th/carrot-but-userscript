@@ -8,18 +8,18 @@ interface CacheEntry<T = unknown> {
   value: T;
 }
 
-export async function getCachedValue<T>(key: string): Promise<T | null> {
-  const entry = await GM_getValue<CacheEntry<T> | null>(cacheKey(key), null);
+export function getCachedValue<T>(key: string): T | null {
+  const entry = GM_getValue<CacheEntry<T> | null>(cacheKey(key), null);
   if (!entry || isExpired(entry)) {
-    await GM_deleteValue(cacheKey(key));
+    GM_deleteValue(cacheKey(key));
     return null;
   }
 
   return entry.value;
 }
 
-export async function setCachedValue<T>(key: string, value: T, ttlMs: number): Promise<void> {
-  await GM_setValue(cacheKey(key), {
+export function setCachedValue<T>(key: string, value: T, ttlMs: number): void {
+  GM_setValue(cacheKey(key), {
     savedAt: Date.now(),
     ttlMs,
     value,
@@ -27,8 +27,10 @@ export async function setCachedValue<T>(key: string, value: T, ttlMs: number): P
 }
 
 export async function clearCachedValues(): Promise<void> {
-  const keys = await getStorageKeys();
-  await Promise.all(keys.map((key) => GM_deleteValue(key)));
+  const keys = getStorageKeys();
+  for (const key of keys) {
+    GM_deleteValue(key);
+  }
 }
 
 function isExpired(entry: CacheEntry): boolean {
@@ -37,8 +39,8 @@ function isExpired(entry: CacheEntry): boolean {
     Date.now() - entry.savedAt > entry.ttlMs;
 }
 
-async function getStorageKeys(): Promise<string[]> {
-  const keys = await GM_listValues();
+function getStorageKeys(): string[] {
+  const keys = GM_listValues();
   return keys.filter((key) => key.startsWith(CACHE_KEY_PREFIX));
 }
 

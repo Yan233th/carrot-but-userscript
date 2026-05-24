@@ -153,7 +153,11 @@ export async function fetchContestStandings(
 }
 
 export async function fetchRatedUsers(): Promise<RatedUser[]> {
-  return await fetchApi<RatedUser[]>('user.ratedList', { activeOnly: 'false' });
+  const users = await fetchApi<RatedUser[]>('user.ratedList', { activeOnly: 'false' });
+  return users.map((user) => ({
+    handle: user.handle,
+    rating: user.rating,
+  }));
 }
 
 export async function fetchApi<T>(method: string, query: Record<string, string | undefined>): Promise<T> {
