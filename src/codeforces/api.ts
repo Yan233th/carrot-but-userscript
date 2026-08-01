@@ -119,7 +119,6 @@ export async function fetchContestStandings(
   try {
     const standings = await fetchApi<ContestStandings>('contest.standings', {
       contestId,
-      showUnofficial: 'false',
     });
     await cache?.set(contestId, gym, {
       source: 'api',
