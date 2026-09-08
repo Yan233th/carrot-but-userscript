@@ -8,12 +8,12 @@ export async function getCachedRatingChanges(contestId: string): Promise<RatingC
   return await getCachedValue<RatingChange[]>(cacheKey(contestId));
 }
 
-export async function setCachedRatingChanges(contestId: string, changes: RatingChange[]): Promise<void> {
+export async function setCachedRatingChanges(contestId: string, changes: RatingChange[]): Promise<boolean> {
   if (changes.length === 0) {
-    return;
+    return false;
   }
 
-  await setCachedValue(cacheKey(contestId), changes, PUBLISHED_CACHE_TTL_MS);
+  return await setCachedValue(cacheKey(contestId), changes, PUBLISHED_CACHE_TTL_MS);
 }
 
 function cacheKey(contestId: string): string {

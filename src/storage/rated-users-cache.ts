@@ -8,6 +8,6 @@ export async function getCachedRatedUsers(): Promise<RatedUser[] | null> {
   return await getCachedValue<RatedUser[]>(CACHE_KEY);
 }
 
-export async function setCachedRatedUsers(users: RatedUser[]): Promise<void> {
-  await setCachedValue(CACHE_KEY, users, CACHE_TTL_MS);
+export async function setCachedRatedUsers(users: RatedUser[]): Promise<boolean> {
+  return await setCachedValue(CACHE_KEY, users, CACHE_TTL_MS);
 }

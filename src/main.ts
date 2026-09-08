@@ -24,7 +24,6 @@ import {
 import { addCacheStatusPanel, type CacheState, type CacheStatusPanel } from './standings/cache-status';
 import { installStandingsStyles } from './standings/style';
 import { getCachedContest, setCachedContest } from './storage/contest-cache';
-import { deleteKnownLegacyOversizedCacheValues } from './storage/cache';
 import { getCachedRatedUsers, setCachedRatedUsers } from './storage/rated-users-cache';
 import { getCachedRatingChanges, setCachedRatingChanges } from './storage/rating-changes-cache';
 import { getCachedContestStandings, setCachedContestStandings } from './storage/standings-cache';
@@ -39,14 +38,13 @@ interface PredictionResult {
 
 interface LoadedApiValue<T> {
   value: T;
-  cache: Extract<CacheState, 'hit' | 'miss' | 'live'>;
+  cache: Extract<CacheState, 'hit' | 'miss' | 'live' | 'unavailable'>;
   source: string;
   durationMs: number;
 }
 
 async function main(): Promise<void> {
   const startedAt = performance.now();
-  await deleteKnownLegacyOversizedCacheValues();
 
   const page = getStandingsPage(window.location);
   if (!page) {
@@ -63,7 +61,7 @@ async function main(): Promise<void> {
   clearCarrotColumns(standings);
   addLoadingColumn(standings);
   const cachePanel = addCacheStatusPanel(standings.table);
-  logProgress('start', startedAt, { contestId: page.contestId, page: page.gym ? 'gym' : 'contest' });
+  logProgress('start', startedAt, { contestId: page.contestId, page: page.gym ? 'gym' : 'contest', storage: 'indexeddb' });
   let ratingStatus: 'published' | 'pending' | 'not-finished' | 'unknown' = 'unknown';
 
   const contestResult = await loadContest(page.contestId, page.gym).catch((error: unknown) => {
@@ -176,12 +174,10 @@ async function loadContest(contestId: string, gym: boolean): Promise<LoadedApiVa
   }
 
   const contest = await fetchContest(contestId, gym);
-  if (contest.phase === 'FINISHED') {
-    await setCachedContest(contestId, gym, contest);
-  }
+  const stored = contest.phase === 'FINISHED' && await setCachedContest(contestId, gym, contest);
   return {
     value: contest,
-    cache: contest.phase === 'FINISHED' ? 'miss' : 'live',
+    cache: contest.phase !== 'FINISHED' ? 'live' : stored ? 'miss' : 'unavailable',
     source: 'contest.list',
     durationMs: performance.now() - startedAt,
   };
@@ -200,10 +196,10 @@ async function loadRatingChanges(contestId: string): Promise<LoadedApiValue<Rati
   }
 
   const changes = await fetchRatingChanges(contestId);
-  await setCachedRatingChanges(contestId, changes);
+  const stored = await setCachedRatingChanges(contestId, changes);
   return {
     value: changes,
-    cache: changes.length === 0 ? 'live' : 'miss',
+    cache: changes.length === 0 ? 'live' : stored ? 'miss' : 'unavailable',
     source: 'contest.ratingChanges',
     durationMs: performance.now() - startedAt,
   };
@@ -285,10 +281,10 @@ async function loadRatedUsers(): Promise<LoadedApiValue<RatedUser[]>> {
   }
 
   const users = await fetchRatedUsers();
-  await setCachedRatedUsers(users);
+  const stored = await setCachedRatedUsers(users);
   return {
     value: users,
-    cache: 'miss',
+    cache: stored ? 'miss' : 'unavailable',
     source: 'user.ratedList',
     durationMs: performance.now() - startedAt,
   };
@@ -318,7 +314,7 @@ function standingsSource(result: ContestStandingsResult): string {
 }
 
 function cacheState(result: ContestStandingsResult): CacheState {
-  return result.source.endsWith('-cache') ? 'hit' : 'miss';
+  return result.source.endsWith('-cache') ? 'hit' : result.cacheStored ? 'miss' : 'unavailable';
 }
 
 function standingsMode(result: ContestStandingsResult): string {

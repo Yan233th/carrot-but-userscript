@@ -63,19 +63,20 @@ export interface ContestStandingsResult {
   source: 'api' | 'api-cache' | 'status-rebuild' | 'status-rebuild-cache';
   standings: ContestStandings;
   durationMs: number;
+  cacheStored?: boolean;
   statusPages?: number;
   submissions?: number;
   officialSubmissions?: number;
   hacks?: number;
 }
 
-export type CachedContestStandings = Omit<ContestStandingsResult, 'durationMs' | 'source'> & {
+export type CachedContestStandings = Omit<ContestStandingsResult, 'durationMs' | 'source' | 'cacheStored'> & {
   source: 'api' | 'status-rebuild';
 };
 
 export interface ContestStandingsCacheAdapter {
   get: (contestId: string, gym: boolean) => Promise<CachedContestStandings | null>;
-  set: (contestId: string, gym: boolean, result: CachedContestStandings) => Promise<void>;
+  set: (contestId: string, gym: boolean, result: CachedContestStandings) => Promise<boolean>;
 }
 
 export interface RatedUser {
@@ -120,7 +121,7 @@ export async function fetchContestStandings(
     const standings = await fetchApi<ContestStandings>('contest.standings', {
       contestId,
     });
-    await cache?.set(contestId, gym, {
+    const cacheStored = await cache?.set(contestId, gym, {
       source: 'api',
       standings,
     });
@@ -128,6 +129,7 @@ export async function fetchContestStandings(
       source: 'api',
       standings,
       durationMs: performance.now() - startedAt,
+      cacheStored,
     };
   } catch (error) {
     if (!shouldRebuildContestStandings(error)) {
@@ -135,7 +137,7 @@ export async function fetchContestStandings(
     }
 
     const rebuilt = await rebuildContestStandings(contestId, gym, knownContest);
-    await cache?.set(contestId, gym, {
+    const cacheStored = await cache?.set(contestId, gym, {
       source: 'status-rebuild',
       ...rebuilt,
     });
@@ -143,6 +145,7 @@ export async function fetchContestStandings(
       source: 'status-rebuild',
       standings: rebuilt.standings,
       durationMs: performance.now() - startedAt,
+      cacheStored,
       statusPages: rebuilt.statusPages,
       submissions: rebuilt.submissions,
       officialSubmissions: rebuilt.officialSubmissions,

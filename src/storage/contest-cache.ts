@@ -8,8 +8,8 @@ export async function getCachedContest(contestId: string, gym: boolean): Promise
   return await getCachedValue<Contest>(cacheKey(contestId, gym));
 }
 
-export async function setCachedContest(contestId: string, gym: boolean, contest: Contest): Promise<void> {
-  await setCachedValue(cacheKey(contestId, gym), contest, CACHE_TTL_MS);
+export async function setCachedContest(contestId: string, gym: boolean, contest: Contest): Promise<boolean> {
+  return await setCachedValue(cacheKey(contestId, gym), contest, CACHE_TTL_MS);
 }
 
 function cacheKey(contestId: string, gym: boolean): string {

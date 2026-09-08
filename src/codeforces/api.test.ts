@@ -1,13 +1,30 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import { fetchContestStandings, type ContestStandings } from './api';
 
 const originalFetch = globalThis.fetch;
 
 afterEach(() => {
+  mock.restore();
   globalThis.fetch = originalFetch;
 });
 
 describe('fetchContestStandings', () => {
+  test('returns usable API data when browser storage cannot save it', async () => {
+    const standings: ContestStandings = {
+      contest: { id: 2252, name: 'Round', type: 'CF', phase: 'FINISHED', frozen: false, durationSeconds: 7200 },
+      problems: [], rows: [],
+    };
+    const fetch = spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ status: 'OK', result: standings }));
+    const result = await fetchContestStandings('2252', false, {
+      get: async () => null,
+      set: async () => false,
+    });
+    expect(result.source).toBe('api');
+    expect(result.cacheStored).toBe(false);
+    expect(result.standings).toEqual(standings);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   test('requests non-gym standings with only the contestId parameter', async () => {
     let requestedUrl = '';
     const standings: ContestStandings = {

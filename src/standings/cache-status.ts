@@ -7,7 +7,7 @@ const MISS_CLASS = 'carrot-but-userscript-cache-miss';
 const LIVE_CLASS = 'carrot-but-userscript-cache-live';
 const CLEAR_BUTTON_CLASS = 'carrot-but-userscript-cache-clear';
 
-export type CacheState = 'hit' | 'miss' | 'live' | 'unused' | 'cleared';
+export type CacheState = 'hit' | 'miss' | 'live' | 'unused' | 'cleared' | 'unavailable';
 
 export interface CacheStatusPanel {
   set: (name: string, state: CacheState) => void;
@@ -34,10 +34,17 @@ export function addCacheStatusPanel(table: HTMLTableElement): CacheStatusPanel {
   clearButton.textContent = 'Clear';
   clearButton.title = 'Clear Carrot, But Userscript cache';
   clearButton.addEventListener('click', () => {
+    clearButton.disabled = true;
     void clearCachedValues().then(() => {
       for (const [name, status] of statuses) {
         renderStatus(status, name, 'cleared');
       }
+      clearButton.title = 'Clear Carrot, But Userscript cache';
+    }).catch((error: unknown) => {
+      clearButton.title = 'Cache could not be cleared; click to retry';
+      console.warn('[Carrot, But Userscript] Cache clear failed:', error instanceof Error ? error.message : String(error));
+    }).finally(() => {
+      clearButton.disabled = false;
     });
   });
   panel.append(clearButton);

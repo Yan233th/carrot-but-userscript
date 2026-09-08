@@ -21,7 +21,7 @@ export default defineConfig({
           'https://codeforces.com/contest/*/standings*',
           'https://codeforces.com/gym/*/standings*',
         ],
-        grant: ['GM.getValue', 'GM.setValue', 'GM.deleteValue', 'GM.listValues'],
+        grant: 'none',
         updateURL: `${releaseBaseUrl}/carrot-but-userscript.meta.js`,
         downloadURL: `${releaseBaseUrl}/carrot-but-userscript.user.js`,
       },

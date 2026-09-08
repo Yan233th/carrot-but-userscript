@@ -58,9 +58,10 @@ Header color indicates the state:
 
 ## Cache
 
-The script keeps a small local cache in Tampermonkey storage to avoid repeated
-Codeforces API requests when you reload a standings page or move between related
-pages.
+The script caches API data in the browser's IndexedDB for `codeforces.com` to
+avoid repeated requests when you reload or move between standings pages.
+Cache data stays in the browser rather than passing through Tampermonkey's
+extension messaging.
 
 Current cache behavior:
 
@@ -74,6 +75,11 @@ Current cache behavior:
 - Empty pending rating-change responses, rendered table cells, and prediction
   results are not stored.
 
+Every cache read or write removes expired entries across all contests, including
+contests you no longer visit. Clearing Codeforces site data also removes this
+cache. If browser storage is unavailable or full, the script continues with live
+API data.
+
 A small `Contest cache` panel shows cache status for the current page. Its
 `Clear` button clears all current-version cache entries created by this
 userscript.
@@ -86,11 +92,20 @@ Cache panel states:
   or empty pending rating-change responses.
 - `unused`: that data source was not needed for the current page state.
 - `cleared`: current-version cache entries were cleared from the panel.
+- `unavailable`: data was fetched but could not be cached in browser storage.
 
-If you upgraded from an early cache build and still see a browser error about a
-message exceeding `64MiB`, clear this userscript's Tampermonkey storage once.
-Current versions store cache entries separately to avoid that browser extension
-message-size limit.
+Older versions used Tampermonkey storage, which could grow large enough to hit
+the browser extension's `64MiB` message limit. This version no longer accesses
+that storage; the first visit fetches fresh data into IndexedDB. The `Clear`
+button clears the new cache, not legacy Tampermonkey data. Updating an existing
+installation preserves its old storage, which Tampermonkey may still include
+in script startup messages even with `@grant none`.
+
+If an affected installation still fails to start, back up its script source,
+then permanently delete only this userscript from Tampermonkey. If it goes to
+the trash bin, permanently remove that entry too. Install the new `*.user.js`
+file and reload the Codeforces tabs. Do not restore the old script storage;
+reinstalling Tampermonkey itself is not required.
 
 ## Limits
 

@@ -16,8 +16,8 @@ export async function setCachedContestStandings(
   contestId: string,
   gym: boolean,
   result: CachedContestStandings,
-): Promise<void> {
-  await setCachedValue(cacheKey(contestId, gym), result, getCacheTtlMs(result));
+): Promise<boolean> {
+  return await setCachedValue(cacheKey(contestId, gym), result, getCacheTtlMs(result));
 }
 
 function cacheKey(contestId: string, gym: boolean): string {
