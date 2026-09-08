@@ -61,7 +61,8 @@ Header color indicates the state:
 The script caches API data in the browser's IndexedDB for `codeforces.com` to
 avoid repeated requests when you reload or move between standings pages.
 Cache data stays in the browser rather than passing through Tampermonkey's
-extension messaging.
+extension messaging. Only the standings row fields needed for calculations are
+stored.
 
 Current cache behavior:
 

@@ -118,9 +118,24 @@ export async function fetchContestStandings(
   }
 
   try {
-    const standings = await fetchApi<ContestStandings>('contest.standings', {
+    const response = await fetchApi<ContestStandings>('contest.standings', {
       contestId,
     });
+    const standings: ContestStandings = {
+      contest: response.contest,
+      problems: response.problems,
+      rows: response.rows.map(({ party, rank, points, penalty }) => ({
+        party: {
+          participantType: party.participantType,
+          teamId: party.teamId,
+          teamName: party.teamName,
+          members: party.members.map(({ handle }) => ({ handle })),
+        },
+        rank,
+        points,
+        penalty,
+      })),
+    };
     const cacheStored = await cache?.set(contestId, gym, {
       source: 'api',
       standings,
