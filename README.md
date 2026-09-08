@@ -39,6 +39,10 @@ The columns appear in-place, beside the Codeforces standings table. Loading is
 shown immediately, then replaced with either final official data or predictions.
 Rows that cannot be matched show `N/A`.
 
+Once official rating changes are available, `Δ` and `Rank` appear without waiting
+for performance. `Π` loads separately; if its data or calculation is unavailable,
+it shows `N/A` without replacing the official results.
+
 ## Data States
 
 The script has two main states:

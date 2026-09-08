@@ -16,6 +16,7 @@ import {
   addFinalRatingColumns,
   addLoadingColumn,
   addPredictedRatingColumns,
+  updateFinalPerformanceColumn,
   type ColumnRenderStats,
   clearCarrotColumns,
   findStandingsTable,
@@ -84,11 +85,15 @@ async function main(): Promise<void> {
   }
 
   if (contest?.phase === 'FINISHED') {
-    try {
-      const ratingChangesResult = await loadRatingChanges(page.contestId);
+    const ratingChangesResult = await loadRatingChanges(page.contestId).catch((error: unknown) => {
+      console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
+      return null;
+    });
+    ratingStatus = 'pending';
+    if (ratingChangesResult) {
       const ratingChanges = ratingChangesResult.value;
+      cachePanel.set('rating', ratingChangesResult.cache);
       if (ratingChanges.length === 0) {
-        ratingStatus = 'pending';
         logProgress('rating', startedAt, {
           cache: ratingChangesResult.cache,
           status: ratingStatus,
@@ -96,37 +101,45 @@ async function main(): Promise<void> {
           changes: 0,
           stepMs: ms(ratingChangesResult.durationMs),
         });
-        cachePanel.set('rating', ratingChangesResult.cache);
       } else {
-        const finalStandingsResult = await fetchContestStandings(page.contestId, page.gym, {
-          get: getCachedContestStandings,
-          set: setCachedContestStandings,
-        }, contest).catch((error: unknown) => {
-          console.error(`${LOG_PREFIX} Final standings unavailable:`, error);
-          return null;
-        });
-        if (finalStandingsResult) {
-          logStandingsResult('standings', startedAt, finalStandingsResult);
-          cachePanel.set('standings', cacheState(finalStandingsResult));
-        }
-        const finalResults = await buildFinalResults(ratingChanges, finalStandingsResult?.standings ?? null);
+        const finalResults = buildFinalResults(ratingChanges);
         ratingStatus = 'published';
         clearCarrotColumns(standings);
-        const stats = addFinalRatingColumns(standings, finalResults);
+        const stats = addFinalRatingColumns(standings, finalResults, true);
         logProgress('final', startedAt, {
           cache: ratingChangesResult.cache,
           source: ratingChangesResult.source,
           changes: ratingChanges.length,
-          performance: countFinalPerformance(finalResults),
+          performance: 'loading',
           rendered: renderRatio(stats),
           stepMs: ms(ratingChangesResult.durationMs),
         });
-        cachePanel.set('rating', ratingChangesResult.cache);
+        const performanceStartedAt = performance.now();
+        let performanceStatus = 'ok';
+        try {
+          const finalStandingsResult = await fetchContestStandings(page.contestId, page.gym, {
+            get: getCachedContestStandings,
+            set: setCachedContestStandings,
+          }, contest);
+          logStandingsResult('standings', startedAt, finalStandingsResult);
+          cachePanel.set('standings', cacheState(finalStandingsResult));
+          const predictions = calculateFinalPerformanceFromCodeforces(finalStandingsResult.standings, ratingChanges);
+          for (const prediction of predictions) {
+            const result = finalResults.get(prediction.handle);
+            if (result) result.performance = prediction.performance;
+          }
+        } catch (error) {
+          performanceStatus = 'unavailable';
+          console.error(`${LOG_PREFIX} Final performance unavailable:`, error);
+        }
+        updateFinalPerformanceColumn(standings, finalResults);
+        logProgress('final-performance', startedAt, {
+          status: performanceStatus,
+          performance: countFinalPerformance(finalResults),
+          stepMs: durationMs(performanceStartedAt),
+        });
         return;
       }
-    } catch (error) {
-      ratingStatus = 'pending';
-      console.info(`${LOG_PREFIX} Rating changes unavailable:`, error);
     }
   }
 
@@ -219,11 +232,8 @@ function logStandingsResult(stage: string, startedAt: number, result: ContestSta
   });
 }
 
-async function buildFinalResults(
-  ratingChanges: Awaited<ReturnType<typeof fetchRatingChanges>>,
-  standings: ContestStandings | null,
-): Promise<Map<string, FinalRatingResult>> {
-  const results = new Map<string, FinalRatingResult>(
+function buildFinalResults(ratingChanges: RatingChange[]): Map<string, FinalRatingResult> {
+  return new Map(
     ratingChanges.map((change) => [
       change.handle,
       {
@@ -233,16 +243,6 @@ async function buildFinalResults(
       },
     ]),
   );
-
-  if (standings) {
-    for (const prediction of calculateFinalPerformanceFromCodeforces(standings, ratingChanges)) {
-      const result = results.get(prediction.handle);
-      if (result) {
-        result.performance = prediction.performance;
-      }
-    }
-  }
-  return results;
 }
 
 async function predictContest(

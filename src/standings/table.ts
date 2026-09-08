@@ -39,12 +39,33 @@ export function findStandingsTable(document: Document): StandingsTable | null {
 export function addFinalRatingColumns(
   standings: StandingsTable,
   finalResults: Map<string, FinalRatingResult> | null,
+  performancePending = false,
 ): ColumnRenderStats {
-  return addRatingColumns(standings, 'Final performance', 'Final rating change', 'Rank change', FINAL_HEADER_CLASS, {
-    performance: (cell, row, isFooterRow) => renderFinalPerformanceCell(cell, row, finalResults, isFooterRow),
+  return addRatingColumns(standings, performancePending ? 'Loading performance' : 'Final performance', 'Final rating change', 'Rank change', FINAL_HEADER_CLASS, {
+    performance: (cell, row, isFooterRow) => performancePending
+      ? renderLoadingCell(cell, isFooterRow)
+      : renderFinalPerformanceCell(cell, row, finalResults, isFooterRow),
     delta: (cell, row, isFooterRow) => renderFinalDeltaCell(cell, row, finalResults, isFooterRow),
     rank: (cell, row, isFooterRow) => renderFinalRankCell(cell, row, finalResults, isFooterRow),
-  });
+  }, performancePending);
+}
+
+export function updateFinalPerformanceColumn(
+  standings: StandingsTable,
+  finalResults: Map<string, FinalRatingResult>,
+): void {
+  for (const [index, row] of standings.rows.entries()) {
+    const cell = row.querySelector<HTMLElement>(`.${PERFORMANCE_CELL_CLASS}`);
+    if (!cell) continue;
+    if (index === 0) {
+      cell.classList.remove(LOADING_HEADER_CLASS);
+      cell.classList.add(FINAL_HEADER_CLASS);
+      cell.title = 'Final performance';
+    } else {
+      cell.classList.remove('carrot-but-userscript-muted');
+      renderFinalPerformanceCell(cell, row, finalResults, index === standings.rows.length - 1);
+    }
+  }
 }
 
 export function addLoadingColumn(standings: StandingsTable): ColumnRenderStats {
@@ -99,6 +120,7 @@ function addRatingColumns(
     delta: (cell: HTMLElement, row: HTMLTableRowElement, isFooterRow: boolean) => boolean;
     rank: (cell: HTMLElement, row: HTMLTableRowElement, isFooterRow: boolean) => boolean;
   },
+  performancePending = false,
 ): ColumnRenderStats {
   let dataRows = 0;
   let matchedRows = 0;
@@ -114,7 +136,7 @@ function addRatingColumns(
     rankCell.classList.add(CELL_CLASS, RANK_CELL_CLASS);
 
     if (index === 0) {
-      performanceCell.classList.add('top', HEADER_CLASS, headerClass);
+      performanceCell.classList.add('top', HEADER_CLASS, performancePending ? LOADING_HEADER_CLASS : headerClass);
       performanceCell.title = performanceTitle;
       performanceCell.textContent = '\u03A0';
 
