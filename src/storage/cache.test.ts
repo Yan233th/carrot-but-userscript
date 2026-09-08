@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { IDBDatabase, IDBObjectStore } from 'fake-indexeddb';
+import { IDBDatabase, IDBObjectStore, IDBOpenDBRequest } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import { clearCachedValues, getCachedValue, setCachedValue } from './cache';
 import { getCachedContest, setCachedContest } from './contest-cache';
@@ -26,6 +26,49 @@ afterEach(() => {
 });
 
 describe('IndexedDB cache', () => {
+  test.each(['throw', 'error', 'blocked'])('retries opening on the next operation after %s', async (failure) => {
+    const modulePath = `./cache.ts?open-recovery-${failure}`;
+    const cache: typeof import('./cache') = await import(modulePath);
+    spyOn(console, 'warn').mockImplementation(() => {});
+    const request = new IDBOpenDBRequest();
+    const open = spyOn(indexedDB, 'open').mockImplementationOnce(() => {
+      if (failure === 'throw') throw new DOMException('Storage temporarily denied', 'SecurityError');
+      return request;
+    });
+    const reading = cache.getCachedValue('recovery');
+    if (failure !== 'throw') {
+      Object.defineProperty(request, 'error', { value: new DOMException('Temporary open failure', 'UnknownError') });
+      if (failure === 'error') request.onerror?.(new Event('error'));
+      else request.onblocked?.(new IDBVersionChangeEvent('blocked'));
+    }
+    expect(await reading).toBeNull();
+    await cache.clearCachedValues();
+    expect(await cache.setCachedValue('recovery', 42, 30_000)).toBe(true);
+    expect(await cache.getCachedValue<number>('recovery')).toBe(42);
+    expect(open).toHaveBeenCalledTimes(2);
+
+    if (failure === 'blocked') {
+      const close = mock(() => {});
+      Object.defineProperty(request, 'result', { value: { close } });
+      request.onsuccess?.(new Event('success'));
+      expect(close).toHaveBeenCalledTimes(1);
+      expect(await cache.getCachedValue<number>('recovery')).toBe(42);
+      expect(open).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  test('reopens after a connection close event', async () => {
+    const modulePath = './cache.ts?closed-connection';
+    const cache: typeof import('./cache') = await import(modulePath);
+    const open = spyOn(indexedDB, 'open');
+    await cache.setCachedValue('reopen', 42, 30_000);
+    const db = (open.mock.results[0]!.value as IDBOpenDBRequest).result;
+    db.close();
+    db.onclose?.(new Event('close'));
+    expect(await cache.getCachedValue<number>('reopen')).toBe(42);
+    expect(open).toHaveBeenCalledTimes(2);
+  });
+
   test('stores independent snapshots and overwrites the same key', async () => {
     const value = { rows: [{ handle: 'tourist' }] };
     expect(await getCachedValue('contest')).toBeNull();

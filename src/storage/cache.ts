@@ -37,7 +37,8 @@ export async function clearCachedValues(): Promise<void> {
 }
 
 function openDatabase(): Promise<IDBDatabase> {
-  database ??= new Promise((resolve, reject) => {
+  if (database) return database;
+  const opening = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, 1);
     let blocked = false;
     request.onupgradeneeded = () => {
@@ -55,14 +56,18 @@ function openDatabase(): Promise<IDBDatabase> {
         db.close();
         return;
       }
-      db.onversionchange = () => {
+      db.onclose = db.onversionchange = () => {
         db.close();
-        database = undefined;
+        if (database === opening) database = undefined;
       };
       resolve(db);
     };
   });
-  return database;
+  database = opening;
+  void opening.catch(() => {
+    if (database === opening) database = undefined;
+  });
+  return opening;
 }
 
 async function transact<T>(operation: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
