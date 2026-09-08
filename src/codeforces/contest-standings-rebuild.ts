@@ -45,10 +45,13 @@ export async function rebuildContestStandings(
   knownContest?: Contest,
 ): Promise<RebuiltContestStandings> {
   const contestPromise = knownContest ? Promise.resolve(knownContest) : fetchContest(contestId, gym);
-  const submissionsPromise = fetchContestSubmissions(contestId);
-  const contest = await contestPromise;
-  const hacksPromise = contest.type === 'CF' ? fetchContestHacks(contestId) : Promise.resolve([]);
-  const [status, hacks] = await Promise.all([submissionsPromise, hacksPromise]);
+  const [contest, status, hacks] = await Promise.all([
+    contestPromise,
+    fetchContestSubmissions(contestId),
+    contestPromise.then((contest) => contest.type === 'CF'
+      ? fetchApi<ContestHack[]>('contest.hacks', { contestId })
+      : []),
+  ]);
   const officialSubmissions = status.submissions.filter((submission) =>
     isOfficialSubmission(submission, contest.durationSeconds),
   );
@@ -107,14 +110,6 @@ async function fetchContestSubmissions(contestId: string): Promise<{ submissions
     if (page.length < PAGE_SIZE) {
       return { submissions, pages };
     }
-  }
-}
-
-async function fetchContestHacks(contestId: string): Promise<ContestHack[]> {
-  try {
-    return await fetchApi<ContestHack[]>('contest.hacks', { contestId });
-  } catch {
-    return [];
   }
 }
 

@@ -10,6 +10,44 @@ afterEach(() => {
 });
 
 describe('fetchContestStandings', () => {
+  test('does not return or cache incomplete CF standings when hacks cannot be fetched', async () => {
+    const contest = { id: 2252, name: 'Round', type: 'CF', phase: 'FINISHED', frozen: false, durationSeconds: 7200 };
+    const set = mock(async () => true);
+    spyOn(globalThis, 'fetch').mockImplementation((async (input) => {
+      const method = new URL(String(input)).pathname;
+      if (method.endsWith('/contest.standings')) {
+        return Response.json({ status: 'FAILED', comment: 'You have to be authenticated' }, { status: 400 });
+      }
+      if (method.endsWith('/contest.hacks')) {
+        throw new Error('Hack request failed');
+      }
+      return Response.json({ status: 'OK', result: [] });
+    }) as typeof fetch);
+    await expect(fetchContestStandings('2252', false, {
+      get: async () => null, set,
+    }, contest)).rejects.toThrow('Hack request failed');
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  test.each(['CF', 'ICPC'])('allows an empty hack list and only requests hacks for CF (%s)', async (type) => {
+    const contest = { id: 2252, name: 'Round', type, phase: 'FINISHED', frozen: false, durationSeconds: 7200 };
+    const requests: string[] = [];
+    spyOn(globalThis, 'fetch').mockImplementation((async (input) => {
+      const method = new URL(String(input)).pathname;
+      requests.push(method);
+      return method.endsWith('/contest.standings')
+        ? Response.json({ status: 'FAILED', comment: 'You have to be authenticated' }, { status: 400 })
+        : Response.json({ status: 'OK', result: [] });
+    }) as typeof fetch);
+    const set = mock(async () => true);
+    const result = await fetchContestStandings('2252', false, { get: async () => null, set }, contest);
+    expect(result.source).toBe('status-rebuild');
+    expect(result.hacks).toBe(0);
+    expect(result.cacheStored).toBe(true);
+    expect(set).toHaveBeenCalledTimes(1);
+    expect(requests.includes('/api/contest.hacks')).toBe(type === 'CF');
+  });
+
   test('drops unused API row fields before caching without changing predictions', async () => {
     const raw = {
       contest: { id: 2252, name: 'Round', type: 'CF', phase: 'CODING', frozen: false, durationSeconds: 7200 },
