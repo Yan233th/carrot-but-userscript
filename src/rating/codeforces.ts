@@ -16,19 +16,9 @@ export function predictFromCodeforces(
   ratedUsers: RatedUser[],
 ): Prediction[] {
   const ratings = new Map(ratedUsers.map((user) => [user.handle, user.rating]));
-  const entries = getPredictionEntries(standings, ratings, {
-    includeUnrated: true,
-    filterEducationalRatedUsers: true,
-  });
+  const entries = getPredictionEntries(standings, ratings);
 
   return predictDeltas(entries);
-}
-
-export function calculatePerformanceFromCodeforces(
-  standings: ContestStandings,
-  ratings: Map<string, number>,
-): Prediction[] {
-  return predictDeltas(getPredictionEntries(standings, ratings, { includeUnrated: false }));
 }
 
 export function calculateFinalPerformanceFromCodeforces(
@@ -62,12 +52,8 @@ export function getPredictionSkipReason(standings: ContestStandings, nowMs = Dat
 function getPredictionEntries(
   standings: ContestStandings,
   ratings: Map<string, number>,
-  options: {
-    includeUnrated: boolean;
-    filterEducationalRatedUsers?: boolean;
-  },
 ): PredictionInput[] {
-  const isEducational = options.filterEducationalRatedUsers && isEducationalRound(standings.contest.name);
+  const isEducational = isEducationalRound(standings.contest.name);
 
   return standings.rows
     .filter((row) => row.party.participantType === 'CONTESTANT')
@@ -78,9 +64,6 @@ function getPredictionEntries(
         return null;
       }
       const rating = ratings.get(handle) ?? null;
-      if (rating === null && !options.includeUnrated) {
-        return null;
-      }
       if (isEducational && rating !== null && rating >= EDUCATIONAL_RATED_THRESHOLD) {
         return null;
       }
